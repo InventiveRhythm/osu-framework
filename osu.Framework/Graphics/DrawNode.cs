@@ -6,6 +6,7 @@
 using System;
 using System.Threading;
 using osu.Framework.Graphics.Rendering;
+using osu.Framework.Statistics;
 
 namespace osu.Framework.Graphics
 {
@@ -104,9 +105,11 @@ namespace osu.Framework.Graphics
 
         protected internal static void DrawOther(DrawNode node, IRenderer renderer)
         {
+            DrawTypePerformanceMonitor.BeginCollecting(node);
             renderer.EnterDrawNode(node);
             node.Draw(renderer);
             renderer.ExitDrawNode();
+            DrawTypePerformanceMonitor.EndCollecting(node);
         }
 
         /// <summary>

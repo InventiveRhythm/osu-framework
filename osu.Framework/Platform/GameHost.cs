@@ -553,6 +553,8 @@ namespace osu.Framework.Platform
                     Renderer.PushDepthInfo(new DepthInfo(false, false));
                 }
 
+                DrawTypePerformanceMonitor.NewFrame();
+
                 // Back pass
                 DrawNode.DrawOther(buffer.Object, Renderer);
 
@@ -1289,7 +1291,7 @@ namespace osu.Framework.Platform
                         t.Monitor.EnablePerformanceProfiling = logging.NewValue;
                 });
                 DebugUtils.LogPerformanceIssues = logging.NewValue;
-                TypePerformanceMonitor.Active = logging.NewValue;
+                TypePerformanceMonitor.Active = DrawTypePerformanceMonitor.Active = logging.NewValue;
             }, true);
 
             bypassFrontToBackPass = DebugConfig.GetBindable<bool>(DebugSetting.BypassFrontToBackPass);
