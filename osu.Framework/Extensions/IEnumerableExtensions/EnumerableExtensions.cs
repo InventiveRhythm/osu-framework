@@ -106,5 +106,26 @@ namespace osu.Framework.Extensions.IEnumerableExtensions
                     select accseq.Concat(new[] { item })
             );
         }
+
+#nullable enable
+
+        public static bool AllTheSame<T, S>(this IEnumerable<T> enu, Func<T, S> selector)
+        {
+            S? target = default;
+
+            foreach (var t in enu)
+            {
+                S result = selector.Invoke(t);
+
+                if (target is null)
+                    target = result;
+                else if (!EqualityComparer<S>.Default.Equals(target, result))
+                    return false;
+            }
+
+            return true;
+        }
+
+#nullable disable
     }
 }
