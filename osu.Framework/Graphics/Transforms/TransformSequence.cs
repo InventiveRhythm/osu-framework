@@ -391,6 +391,54 @@ namespace osu.Framework.Graphics.Transforms
             return Append(childGenerators);
         }
 
+        public TransformSequence<T> During(Action action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+
+            return During(_ => action());
+        }
+
+        public TransformSequence<T> During(Action<T> action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+
+            var transform = new DuringTransform<T>(action);
+
+            using (origin.BeginAbsoluteSequence(currentTime, false))
+            {
+                origin.PopulateTransform(transform, true, Math.Max(0, endTime - currentTime), Easing.None);
+
+                origin.AddTransform(transform);
+            }
+
+            Add(transform);
+            return this;
+        }
+
+        public TransformSequence<T> During(double duration, Action action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+
+            return During(duration, _ => action());
+        }
+
+        public TransformSequence<T> During(double duration, Action<T> action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+
+            var transform = new DuringTransform<T>(action);
+
+            using (origin.BeginAbsoluteSequence(currentTime, false))
+            {
+                origin.PopulateTransform(transform, true, duration, Easing.None);
+
+                origin.AddTransform(transform);
+            }
+
+            Add(transform);
+            return this;
+        }
+
         /// <summary>
         /// Registers a callback <paramref name="function"/> which is triggered once all <see cref="Transform"/>s in this
         /// <see cref="TransformSequence{T}"/> complete successfully.
