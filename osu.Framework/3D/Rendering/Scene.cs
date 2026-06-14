@@ -5,6 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shaders;
+using osu.Framework.Layout;
 
 namespace osu.Framework._3D.Rendering
 {
@@ -20,6 +21,7 @@ namespace osu.Framework._3D.Rendering
 
         private Camera? camera;
         private IShader blitShader = null!;
+        private long updateVersion;
 
         [BackgroundDependencyLoader]
         private void load(ShaderManager shaders)
@@ -28,6 +30,22 @@ namespace osu.Framework._3D.Rendering
         }
 
         protected sealed override DrawNode CreateDrawNode() => Pipeline = CreateRenderPipeline();
-        protected virtual RenderPipeline CreateRenderPipeline() => new(this);
+        protected virtual RenderPipeline CreateRenderPipeline() => new RenderPipeline(this);
+
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+            Invalidate(Invalidation.DrawNode);
+        }
+
+        protected override bool OnInvalidate(Invalidation invalidation, InvalidationSource source)
+        {
+            bool result = base.OnInvalidate(invalidation, source);
+
+            if ((invalidation & Invalidation.DrawNode) <= 0) return result;
+
+            updateVersion++;
+            return true;
+        }
     }
 }
