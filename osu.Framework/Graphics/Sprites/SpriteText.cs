@@ -174,6 +174,20 @@ namespace osu.Framework.Graphics.Sprites
             }
         }
 
+        private bool renderBoundsOnly;
+
+        public bool RenderBoundsOnly
+        {
+            get => renderBoundsOnly;
+            set
+            {
+                if (renderBoundsOnly == value) return;
+
+                renderBoundsOnly = value;
+                Invalidate(Invalidation.DrawNode);
+            }
+        }
+
         private bool shadow;
 
         /// <summary>

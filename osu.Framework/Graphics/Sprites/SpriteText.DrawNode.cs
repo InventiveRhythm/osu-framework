@@ -19,6 +19,7 @@ namespace osu.Framework.Graphics.Sprites
         {
             protected new SpriteText Source => (SpriteText)base.Source;
 
+            private bool renderBoundsOnly;
             private bool shadow;
             private ColourInfo shadowColour;
             private Vector2 shadowOffset;
@@ -36,6 +37,7 @@ namespace osu.Framework.Graphics.Sprites
                 base.ApplyState();
 
                 updateScreenSpaceCharacters();
+                renderBoundsOnly = Source.RenderBoundsOnly;
                 shadow = Source.Shadow;
                 offset = Source.GlyphOffset;
 
@@ -72,9 +74,11 @@ namespace osu.Framework.Graphics.Sprites
                         quad.BottomRight + offset
                     );
 
+                    var texture = renderBoundsOnly ? renderer.WhitePixel : parts[i].Texture;
+
                     if (shadow)
                     {
-                        renderer.DrawQuad(parts[i].Texture,
+                        renderer.DrawQuad(texture,
                             new Quad(
                                 quad.TopLeft + shadowOffset,
                                 quad.TopRight + shadowOffset,
@@ -83,7 +87,7 @@ namespace osu.Framework.Graphics.Sprites
                             finalShadowColour, inflationPercentage: parts[i].InflationPercentage);
                     }
 
-                    renderer.DrawQuad(parts[i].Texture, quad, DrawColourInfo.Colour, inflationPercentage: parts[i].InflationPercentage);
+                    renderer.DrawQuad(texture, quad, DrawColourInfo.Colour, inflationPercentage: parts[i].InflationPercentage);
                 }
 
                 UnbindTextureShader(renderer);
