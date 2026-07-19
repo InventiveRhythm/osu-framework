@@ -276,6 +276,8 @@ namespace osu.Framework.Graphics.Containers
             sharedData = new BufferedContainerDrawNodeSharedData(formats, pixelSnapping, !cachedFrameBuffer);
 
             AddLayout(screenSpaceSizeBacking);
+
+            Blending = BlendingParameters.Premultiplied;
         }
 
         [BackgroundDependencyLoader]
@@ -369,20 +371,32 @@ namespace osu.Framework.Graphics.Containers
         /// <returns>The view.</returns>
         public BufferedContainerView<T> CreateView() => new BufferedContainerView<T>(this, sharedData);
 
-        public DrawColourInfo? FrameBufferDrawColour => base.DrawColourInfo;
-
-        // Children should not receive the true colour to avoid colour doubling when the frame-buffers are rendered to the back-buffer.
-        public override DrawColourInfo DrawColourInfo
+        public DrawColourInfo? FrameBufferDrawColour
         {
             get
             {
-                // Todo: This is incorrect.
-                var blending = Blending;
-                blending.ApplyDefaultToInherited();
-
-                return new DrawColourInfo(Color4.White, blending);
+                var colour = base.DrawColourInfo;
+                colour.Colour = premultAlphaColourInfo(colour.Colour);
+                return colour;
             }
         }
+
+        // Children should not receive the true colour to avoid colour doubling when the frame-buffers are rendered to the back-buffer.
+        // Force premultiplied alpha blending so the framebuffer contains premultiplied values
+        // when this buffer is blitted with normal (mixture) blending, the alpha is applied only once.
+        // without this, dark edges would appear as alpha is applied multiple times.
+        public override DrawColourInfo DrawColourInfo => new(Color4.White, BlendingParameters.Mixture);
+
+        private static ColourInfo premultAlphaColourInfo(ColourInfo c)
+        {
+            c.TopLeft = premultAlphaColor4(c.TopLeft);
+            c.TopRight = premultAlphaColor4(c.TopRight);
+            c.BottomLeft = premultAlphaColor4(c.BottomLeft);
+            c.BottomRight = premultAlphaColor4(c.BottomRight);
+            return c;
+        }
+
+        private static Color4 premultAlphaColor4(Color4 c) => new Color4(c.R * c.A, c.G * c.A, c.B * c.A, c.A);
 
         protected override void Dispose(bool isDisposing)
         {
