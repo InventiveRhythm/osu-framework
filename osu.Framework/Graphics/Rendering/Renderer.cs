@@ -397,6 +397,9 @@ namespace osu.Framework.Graphics.Rendering
             FlushCurrentBatch(FlushBatchSource.SetBlend);
             SetBlendImplementation(blendingParameters);
 
+            if (CurrentBlendingParameters.ColourMode != blendingParameters.ColourMode)
+                globalUniformsChanged = true;
+
             CurrentBlendingParameters = blendingParameters;
         }
 
@@ -1010,7 +1013,8 @@ namespace osu.Framework.Graphics.Rendering
                         ? currentMaskingInfo.HollowCornerRadius
                         : globalUniformBuffer.Data.InnerCornerRadius,
                     WrapModeS = (int)CurrentWrapModeS,
-                    WrapModeT = (int)CurrentWrapModeT
+                    WrapModeT = (int)CurrentWrapModeT,
+                    BlendColourMode = (int)CurrentBlendingParameters.ColourMode,
                 };
 
                 globalUniformsChanged = false;

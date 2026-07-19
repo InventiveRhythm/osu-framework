@@ -8,11 +8,12 @@ namespace osu.Framework.Graphics
         None,
         Inherit,
         Mix,
-        Difference,
+        LegacyDifference,
         Add,
         Subtract,
         Screen,
         Multiply,
         Premultiplied,
+        Difference
     }
 }
