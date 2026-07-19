@@ -36,6 +36,30 @@ namespace osu.Framework.Graphics.Video
             }
         }
 
+        internal static unsafe bool HasAlpha(this AVPixelFormat pixFmt)
+        {
+            switch (pixFmt)
+            {
+                case AVPixelFormat.AV_PIX_FMT_YUVA420P:
+                case AVPixelFormat.AV_PIX_FMT_YUVA422P:
+                case AVPixelFormat.AV_PIX_FMT_YUVA444P:
+                case AVPixelFormat.AV_PIX_FMT_YUVA420P10LE:
+                case AVPixelFormat.AV_PIX_FMT_YUVA422P10LE:
+                case AVPixelFormat.AV_PIX_FMT_YUVA444P10LE:
+                case AVPixelFormat.AV_PIX_FMT_YUVA444P12LE:
+                case AVPixelFormat.AV_PIX_FMT_RGBA:
+                case AVPixelFormat.AV_PIX_FMT_BGRA:
+                case AVPixelFormat.AV_PIX_FMT_ARGB:
+                case AVPixelFormat.AV_PIX_FMT_ABGR:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        internal static unsafe bool HasAlpha(this FFmpegFrame frame) => ((AVPixelFormat)frame.Pointer->format).HasAlpha();
+
         public static HardwareVideoDecoder? ToHardwareVideoDecoder(this AVHWDeviceType hwDeviceType)
         {
             switch (hwDeviceType)

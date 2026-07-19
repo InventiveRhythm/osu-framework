@@ -9,8 +9,10 @@ layout(set = 1, binding = 0) uniform lowp texture2D m_TextureU;
 layout(set = 1, binding = 1) uniform lowp sampler m_SamplerU;
 layout(set = 2, binding = 0) uniform lowp texture2D m_TextureV;
 layout(set = 2, binding = 1) uniform lowp sampler m_SamplerV;
+layout(set = 3, binding = 0) uniform lowp texture2D m_TextureA;
+layout(set = 3, binding = 1) uniform lowp sampler m_SamplerA;
 
-layout(std140, set = 3, binding = 0) uniform m_yuvData
+layout(std140, set = 4, binding = 0) uniform m_yuvData
 {
     mediump mat3 yuvCoeff;
 };
@@ -27,7 +29,11 @@ lowp vec4 wrappedSamplerRgb(vec2 wrappedCoord, vec4 texRect, float lodBias)
     lowp float y = texture(sampler2D(m_TextureY, m_SamplerY), wrappedCoord, lodBias).r;
     lowp float u = texture(sampler2D(m_TextureU, m_SamplerU), wrappedCoord, lodBias).r;
     lowp float v = texture(sampler2D(m_TextureV, m_SamplerV), wrappedCoord, lodBias).r;
-    return vec4(yuvCoeff * (vec3(y, u, v) + offsets), 1.0);
+    lowp float a = texture(sampler2D(m_TextureA, m_SamplerA), wrappedCoord, lodBias).r;
+    
+    lowp vec3 rgb = yuvCoeff * (vec3(y, u, v) + offsets);
+    
+    return vec4(rgb, a);
 }
 
 #endif

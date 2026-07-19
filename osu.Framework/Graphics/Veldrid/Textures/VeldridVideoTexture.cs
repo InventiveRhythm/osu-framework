@@ -37,13 +37,14 @@ namespace osu.Framework.Graphics.Veldrid.Textures
             if (resourceList == null)
             {
                 Debug.Assert(memoryLease == null);
-                memoryLease = NativeMemoryTracker.AddMemory(this, Width * Height * 3 / 2);
-                resourceList = new VeldridTextureResources[3];
+                memoryLease = NativeMemoryTracker.AddMemory(this, Width * Height * 5 / 2);
+                resourceList = new VeldridTextureResources[4];
 
                 for (uint i = 0; i < resourceList.Length; i++)
                 {
-                    int width = videoUpload.GetPlaneWidth(i);
-                    int height = videoUpload.GetPlaneHeight(i);
+                    bool isDummyAlpha = i == 3 && !videoUpload.HasAlpha;
+                    int width = isDummyAlpha ? 1 : videoUpload.GetPlaneWidth(i);
+                    int height = isDummyAlpha ? 1 : videoUpload.GetPlaneHeight(i);
                     int countPixels = width * height;
 
                     resourceList[i] = new VeldridTextureResources
@@ -61,12 +62,21 @@ namespace osu.Framework.Graphics.Veldrid.Textures
                         })
                     );
 
+                    if (isDummyAlpha)
+                    {
+                        byte whitePixel = 255;
+                        Renderer.UpdateTexture(resourceList[i].Texture, 0, 0, 1, 1, 0, new IntPtr(&whitePixel), 1);
+                    }
+
                     textureSize += countPixels;
                 }
             }
 
             for (uint i = 0; i < resourceList.Length; i++)
             {
+                if (i == 3 && !videoUpload.HasAlpha)
+                    continue;
+
                 Renderer.UpdateTexture(
                     resourceList[i].Texture,
                     0,
