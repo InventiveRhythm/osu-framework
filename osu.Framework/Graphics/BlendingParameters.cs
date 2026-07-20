@@ -46,6 +46,11 @@ namespace osu.Framework.Graphics
         /// </summary>
         public BlendingEquation AlphaEquation;
 
+        /// <summary>
+        /// Gets or sets the <see cref="BlendColourMode"/> to use for the color adjustment before the blend.
+        /// </summary>
+        public BlendColourMode ColourMode;
+
         #endregion
 
         #region Default Blending Parameter Types
@@ -58,6 +63,7 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.Zero,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None,
         };
 
         public static BlendingParameters Inherit => new BlendingParameters
@@ -68,6 +74,7 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.Inherit,
             RGBEquation = BlendingEquation.Inherit,
             AlphaEquation = BlendingEquation.Inherit,
+            ColourMode = BlendColourMode.Inherit,
         };
 
         public static BlendingParameters Mixture => new BlendingParameters
@@ -78,10 +85,10 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.One,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None,
         };
 
-        // we can't really get an accurate diffrence blend for alphas with the current blending params, this is a close approximation
-        public static BlendingParameters Difference => new BlendingParameters
+        public static BlendingParameters LegacyDifference => new BlendingParameters
         {
             Source = BlendingType.One,
             Destination = BlendingType.One,
@@ -89,6 +96,20 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.One,
             RGBEquation = BlendingEquation.Subtract,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None
+        };
+
+        // We can't really get an accurate difference blend as it would require shaders with both foreground and background to sample from.
+        // This is just a somewhat close approximation.
+        public static BlendingParameters Difference => new BlendingParameters
+        {
+            Source = BlendingType.OneMinusDstColor,
+            Destination = BlendingType.OneMinusSrcColor,
+            SourceAlpha = BlendingType.One,
+            DestinationAlpha = BlendingType.OneMinusSrcAlpha,
+            RGBEquation = BlendingEquation.Add,
+            AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.Premultiply,
         };
 
         public static BlendingParameters Additive => new BlendingParameters
@@ -99,36 +120,40 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.One,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None,
         };
 
         public static BlendingParameters Subtractive => new BlendingParameters
         {
-            Source = BlendingType.One,
+            Source = BlendingType.SrcAlpha,
             Destination = BlendingType.One,
             SourceAlpha = BlendingType.Zero,
             DestinationAlpha = BlendingType.One,
             RGBEquation = BlendingEquation.ReverseSubtract,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None,
         };
 
         public static BlendingParameters Screen => new BlendingParameters
         {
-            Source = BlendingType.One,
-            Destination = BlendingType.OneMinusSrcColor,
+            Source = BlendingType.OneMinusDstColor,
+            Destination = BlendingType.One,
             SourceAlpha = BlendingType.One,
             DestinationAlpha = BlendingType.OneMinusSrcAlpha,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.Premultiply,
         };
 
         public static BlendingParameters Multiplicative => new BlendingParameters
         {
             Source = BlendingType.DstColor,
-            Destination = BlendingType.OneMinusSrcAlpha,
+            Destination = BlendingType.Zero,
             SourceAlpha = BlendingType.One,
             DestinationAlpha = BlendingType.OneMinusSrcAlpha,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.NeutralWhite,
         };
 
         public static BlendingParameters Premultiplied => new BlendingParameters
@@ -139,6 +164,7 @@ namespace osu.Framework.Graphics
             DestinationAlpha = BlendingType.OneMinusSrcAlpha,
             RGBEquation = BlendingEquation.Add,
             AlphaEquation = BlendingEquation.Add,
+            ColourMode = BlendColourMode.None,
         };
 
         #endregion
@@ -150,6 +176,7 @@ namespace osu.Framework.Graphics
                 DefaultBlendingParameters.None => None,
                 DefaultBlendingParameters.Inherit => Inherit,
                 DefaultBlendingParameters.Mix => Mixture,
+                DefaultBlendingParameters.LegacyDifference => LegacyDifference,
                 DefaultBlendingParameters.Difference => Difference,
                 DefaultBlendingParameters.Add => Additive,
                 DefaultBlendingParameters.Subtract => Subtractive,
@@ -183,6 +210,9 @@ namespace osu.Framework.Graphics
 
             if (AlphaEquation == BlendingEquation.Inherit)
                 AlphaEquation = parent.AlphaEquation;
+
+            if (ColourMode == BlendColourMode.Inherit)
+                ColourMode = parent.ColourMode;
         }
 
         /// <summary>
@@ -207,6 +237,9 @@ namespace osu.Framework.Graphics
 
             if (AlphaEquation == BlendingEquation.Inherit)
                 AlphaEquation = BlendingEquation.Add;
+
+            if (ColourMode == BlendColourMode.Inherit)
+                ColourMode = BlendColourMode.None;
         }
 
         public readonly bool Equals(BlendingParameters other) =>
@@ -215,7 +248,8 @@ namespace osu.Framework.Graphics
             && other.SourceAlpha == SourceAlpha
             && other.DestinationAlpha == DestinationAlpha
             && other.RGBEquation == RGBEquation
-            && other.AlphaEquation == AlphaEquation;
+            && other.AlphaEquation == AlphaEquation
+            && other.ColourMode == ColourMode;
 
         public static bool operator ==(in BlendingParameters left, in BlendingParameters right) =>
             left.Source == right.Source &&
@@ -223,14 +257,15 @@ namespace osu.Framework.Graphics
             left.SourceAlpha == right.SourceAlpha &&
             left.DestinationAlpha == right.DestinationAlpha &&
             left.RGBEquation == right.RGBEquation &&
-            left.AlphaEquation == right.AlphaEquation;
+            left.AlphaEquation == right.AlphaEquation &&
+            left.ColourMode == right.ColourMode;
 
         public static bool operator !=(in BlendingParameters left, in BlendingParameters right) => !(left == right);
 
         public override readonly bool Equals(object obj) => obj is BlendingParameters other && this == other;
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
-        public override readonly int GetHashCode() => HashCode.Combine(Source, Destination, SourceAlpha, DestinationAlpha, RGBEquation, AlphaEquation);
+        public override readonly int GetHashCode() => HashCode.Combine(Source, Destination, SourceAlpha, DestinationAlpha, RGBEquation, AlphaEquation, ColourMode);
 
         public readonly bool IsDisabled =>
             Source == BlendingType.One
