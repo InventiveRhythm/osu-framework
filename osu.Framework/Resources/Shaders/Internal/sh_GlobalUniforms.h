@@ -39,6 +39,8 @@ layout(std140, set = -1, binding = 0) uniform g_GlobalUniforms
     // 3 -> Repeat
     int g_WrapModeS;
     int g_WrapModeT;
+
+    int g_BlendColourMode;
 };
 
 #endif
