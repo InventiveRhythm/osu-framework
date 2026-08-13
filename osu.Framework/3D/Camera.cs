@@ -13,10 +13,18 @@ namespace osu.Framework._3D
         public float NearPlaneDist { get; set; } = 0.01f;
         public float FarPlaceDist { get; set; } = 1000f;
 
+        public Camera()
+        {
+            Matrix = Matrix4.Identity;
+        }
+
         public Matrix4 GetProjectionMatrix(float width, float height)
         {
-            var mat = Matrix.Inverted() * Matrix4.CreateScale(1, 1, -1);
-            return mat * Matrix4.CreatePerspectiveFieldOfView(Fov, width / height, NearPlaneDist, FarPlaceDist);
+            var view = Matrix == default ? Matrix4.Identity : Matrix.Inverted();
+            var flipZ = Matrix4.CreateScale(1, 1, -1);
+
+            var projection = Matrix4.CreatePerspectiveFieldOfView(Fov, width / height, NearPlaneDist, FarPlaceDist);
+            return projection * flipZ * view;
         }
     }
 }

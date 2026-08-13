@@ -5,6 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shaders;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Layout;
 
 namespace osu.Framework._3D.Rendering
@@ -23,10 +24,16 @@ namespace osu.Framework._3D.Rendering
         private IShader blitShader = null!;
         private long updateVersion;
 
+        private IShader shader = null!;
+        private Texture texture = null!;
+
         [BackgroundDependencyLoader]
-        private void load(ShaderManager shaders)
+        private void load(ShaderManager shaders, TextureStore textures)
         {
             blitShader = shaders.Load(VertexShaderDescriptor.TEXTURE_2, FragmentShaderDescriptor.TEXTURE);
+            shader = shaders.Load(VertexShaderDescriptor.TEXTURE_3, "Texture3D");
+
+            texture = textures.Get("monokuma.jpg");
         }
 
         protected sealed override DrawNode CreateDrawNode() => Pipeline = CreateRenderPipeline();

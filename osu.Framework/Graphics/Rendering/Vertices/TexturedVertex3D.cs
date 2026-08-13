@@ -10,13 +10,13 @@ using osuTK.Graphics.ES30;
 namespace osu.Framework.Graphics.Rendering.Vertices
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct TexturedVertex3D : IEquatable<TexturedVertex3D>, IVertex
+    public struct TexturedVertex3D() : IEquatable<TexturedVertex3D>, IVertex
     {
         [VertexMember(3, VertexAttribPointerType.Float)]
         public Vector3 Position;
 
         [VertexMember(4, VertexAttribPointerType.Float)]
-        public Color4 Colour;
+        public Color4 Colour = Color4.White;
 
         [VertexMember(2, VertexAttribPointerType.Float)]
         public Vector2 TexturePosition;

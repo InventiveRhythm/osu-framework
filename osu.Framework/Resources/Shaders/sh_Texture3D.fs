@@ -4,7 +4,6 @@
 #include "sh_Utils.h"
 #include "sh_Masking.h"
 #include "sh_TextureWrapping.h"
-#include "sh_Blending.h"
 
 layout(location = 2) in mediump vec2 v_TexCoord;
 
@@ -15,9 +14,8 @@ layout(location = 0) out vec4 o_Colour;
 
 void main(void)
 {
-    vec2 wrappedCoord = wrap(v_TexCoord, v_TexRect);
-    vec4 roundedColor = getRoundedColor(wrappedSampler(wrappedCoord, v_TexRect, m_Texture, m_Sampler, -0.9), wrappedCoord);
-    o_Colour = applyBlendColourMode(roundedColor);
+    vec4 col = texture(sampler2D(m_Texture, m_Sampler), v_TexCoord);
+    o_Colour = col;
 }
 
 #endif

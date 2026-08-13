@@ -6,6 +6,7 @@ using System.Diagnostics;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Rendering;
+using osu.Framework.Graphics.Rendering.Vertices;
 using osu.Framework.Graphics.Shaders;
 using osuTK;
 
@@ -36,7 +37,14 @@ namespace osu.Framework._3D.Rendering
                 quad = Source.ScreenSpaceDrawQuad;
                 size = quad.Size;
                 blit = Source.blitShader;
-                projection = Source.Camera.GetProjectionMatrix(size.X, size.Y);
+                projection = Source.Camera.GetProjectionMatrix(Source.DrawWidth, Source.DrawHeight);
+
+                /*var proj = Matrix4.CreatePerspectiveFieldOfView(cam.Fov, size.X / size.Y, cam.NearPlaneDist, cam.FarPlaceDist);
+                var flipZ = Matrix4.CreateScale(1, 1, -1);
+                projection = proj * flipZ * view;
+
+                if (projection.M11 == 0 && projection.M22 == 0 && projection.M33 == 0 && projection.M44 == 0)
+                    projection = Matrix4.CreatePerspectiveFieldOfView(Source.Camera.Fov, size.X / size.Y, Source.Camera.NearPlaneDist, Source.Camera.FarPlaceDist);*/
             }
 
             protected sealed override void Draw(IRenderer renderer)
@@ -53,39 +61,69 @@ namespace osu.Framework._3D.Rendering
                 blit.Unbind();
             }
 
+            private IVertexBatch<TexturedVertex3D>? batch;
+
             internal void DrawInternal(IRenderer renderer)
             {
                 Debug.Assert(buffer != null);
 
-                renderer.PushScissorState(false);
+                renderer.PushDepthInfo(new DepthInfo(
+                    depthTest: true,
+                    writeDepth: false,
+                    function: BufferTestFunction.Always
+                ));
+
+                renderer.PushViewport(new RectangleI(0, 0, (int)buffer.Size.X, (int)buffer.Size.Y));
+                buffer.Bind();
+
+                renderer.Clear(new ClearInfo(Colour4.Gray, depth: 1f));
+
+                Source.shader.Bind();
+                renderer.WhitePixel.Bind();
+
+                batch ??= renderer.CreateLinearBatch<TexturedVertex3D>(3 * 64, 1, PrimitiveTopology.Triangles);
+
+                renderer.PushProjectionMatrix(
+                    Matrix4.Identity
+                    * Matrix4.CreateFromQuaternion(Source.Camera.Rotation)
+                );
+
+                var s = Source.ScreenSpaceDrawQuad.Size;
+
                 renderer.PushMaskingInfo(new MaskingInfo
                 {
-                    ScreenSpaceAABB = new RectangleI(0, 0, (int)buffer.Size.X, (int)buffer.Size.Y),
-                    MaskingRect = new RectangleF(0, 0, size.X, size.Y),
+                    ScreenSpaceAABB = new RectangleI(0, 0, (int)s.X, (int)s.Y),
+                    MaskingRect = new RectangleF(0, 0, s.X, s.Y),
                     ToMaskingSpace = Matrix3.Identity,
                     BlendRange = 1,
-                    AlphaExponent = 1
+                    AlphaExponent = 1,
+                    CornerExponent = 2f,
                 }, true);
-                renderer.PushViewport(new RectangleI(0, 0, (int)buffer.Size.X, (int)buffer.Size.Y));
-                renderer.PushDepthInfo(new DepthInfo(function: BufferTestFunction.LessThan));
 
-                buffer.Bind();
-                renderer.Clear(new ClearInfo(depth: 1));
-                renderer.PushProjectionMatrix(projection);
+                batch.Add(new TexturedVertex3D { Position = new Vector3(0f, 0.5f, 0), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(0.5f, -0.5f, 0), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(-0.5f, -0.5f, 0), TexturePosition = new Vector2(0, 0) });
 
-                renderer.DrawQuad(renderer.WhitePixel, quad, Colour4.White);
+                batch.Add(new TexturedVertex3D { Position = new Vector3(-0.5f, -0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(0f, 0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(0.5f, -0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
 
-                buffer.Unbind();
-                renderer.PopProjectionMatrix();
-                renderer.PopDepthInfo();
-                renderer.PopViewport();
+                batch.Draw();
+
                 renderer.PopMaskingInfo();
-                renderer.PopScissorState();
+                renderer.PopProjectionMatrix();
+
+                Source.shader.Unbind();
+                buffer.Unbind();
+
+                renderer.PopViewport();
+                renderer.PopDepthInfo();
             }
 
             protected override void Dispose(bool isDisposing)
             {
                 buffer?.Dispose();
+                buffer = null;
 
                 base.Dispose(isDisposing);
             }
