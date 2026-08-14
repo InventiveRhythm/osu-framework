@@ -58,6 +58,9 @@ namespace osu.Framework.Graphics.Rendering.Deferred.Events
         private SetStencilInfoEvent setStencilInfo;
 
         [FieldOffset(8)]
+        private SetCullingInfoEvent setCullingInfo;
+
+        [FieldOffset(8)]
         private SetTextureEvent setTexture;
 
         [FieldOffset(8)]
@@ -154,6 +157,12 @@ namespace osu.Framework.Graphics.Rendering.Deferred.Events
         {
             Type = RenderEventType.SetStencilInfo,
             setStencilInfo = @event
+        };
+
+        public static RenderEvent Create(in SetCullingInfoEvent @event) => new RenderEvent
+        {
+            Type = RenderEventType.SetCullingInfo,
+            setCullingInfo = @event
         };
 
         public static RenderEvent Create(in SetTextureEvent @event) => new RenderEvent
@@ -268,6 +277,12 @@ namespace osu.Framework.Graphics.Rendering.Deferred.Events
         {
             Debug.Assert(@event.Type == RenderEventType.SetStencilInfo);
             return @event.setStencilInfo;
+        }
+
+        public static explicit operator SetCullingInfoEvent(RenderEvent @event)
+        {
+            Debug.Assert(@event.Type == RenderEventType.SetCullingInfo);
+            return @event.setCullingInfo;
         }
 
         public static explicit operator SetTextureEvent(RenderEvent @event)

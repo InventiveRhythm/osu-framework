@@ -189,6 +189,12 @@ namespace osu.Framework.Graphics.Rendering.Deferred
                         break;
                     }
 
+                    case RenderEventType.SetCullingInfo:
+                    {
+                        processEvent((SetCullingInfoEvent)renderEvent);
+                        break;
+                    }
+
                     case RenderEventType.SetViewport:
                     {
                         processEvent((SetViewportEvent)renderEvent);
@@ -257,6 +263,9 @@ namespace osu.Framework.Graphics.Rendering.Deferred
 
         private void processEvent(in SetStencilInfoEvent e)
             => graphics.SetStencilInfo(e.Info);
+
+        private void processEvent(in SetCullingInfoEvent e)
+            => graphics.SetCullingInfo(e.Info);
 
         private void processEvent(in SetViewportEvent e)
             => graphics.SetViewport(e.Viewport);

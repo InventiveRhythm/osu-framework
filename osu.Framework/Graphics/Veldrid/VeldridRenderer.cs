@@ -158,6 +158,9 @@ namespace osu.Framework.Graphics.Veldrid
         protected override void SetStencilInfoImplementation(StencilInfo stencilInfo)
             => graphicsPipeline.SetStencilInfo(stencilInfo);
 
+        protected override void SetCullingInfoImplementation(CullingInfo cullingInfo)
+            => graphicsPipeline.SetCullingInfo(cullingInfo);
+
         protected override void SetFrameBufferImplementation(IFrameBuffer? frameBuffer)
             => graphicsPipeline.SetFrameBuffer((VeldridFrameBuffer?)frameBuffer);
 

@@ -131,5 +131,38 @@ namespace osu.Framework.Graphics.OpenGL
                     throw new ArgumentException($"Unsupported stencil operation: {operation}.", nameof(operation));
             }
         }
+
+        public static CullFaceMode ToCullFaceMode(FaceCullingMode mode)
+        {
+            switch (mode)
+            {
+                case FaceCullingMode.Back:
+                    return CullFaceMode.Back;
+
+                case FaceCullingMode.Front:
+                    return CullFaceMode.Front;
+
+                case FaceCullingMode.FrontAndBack:
+                    return CullFaceMode.FrontAndBack;
+
+                default:
+                    throw new ArgumentException($"Unsupported face culling mode: {mode}.", nameof(mode));
+            }
+        }
+
+        public static FrontFaceDirection ToFrontFaceDirection(FrontFace order)
+        {
+            switch (order)
+            {
+                case FrontFace.Clockwise:
+                    return FrontFaceDirection.Cw;
+
+                case FrontFace.CounterClockwise:
+                    return FrontFaceDirection.Ccw;
+
+                default:
+                    throw new ArgumentException($"Unsupported front face direction: {order}.", nameof(order));
+            }
+        }
     }
 }

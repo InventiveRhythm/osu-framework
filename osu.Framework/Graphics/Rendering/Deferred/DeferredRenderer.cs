@@ -113,6 +113,9 @@ namespace osu.Framework.Graphics.Rendering.Deferred
         protected override void SetStencilInfoImplementation(StencilInfo stencilInfo)
             => Context.EnqueueEvent(SetStencilInfoEvent.Create(stencilInfo));
 
+        protected override void SetCullingInfoImplementation(CullingInfo cullingInfo)
+            => Context.EnqueueEvent(SetCullingInfoEvent.Create(cullingInfo));
+
         protected override void SetShaderImplementation(IShader shader)
             => Context.EnqueueEvent(SetShaderEvent.Create(this, shader));
 

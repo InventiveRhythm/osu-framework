@@ -109,6 +109,10 @@ namespace osu.Framework.Graphics.Rendering.Dummy
         {
         }
 
+        protected override void SetCullingInfoImplementation(CullingInfo cullingInfo)
+        {
+        }
+
         protected override bool SetTextureImplementation(INativeTexture? texture, int unit)
             => true;
 

@@ -16,6 +16,7 @@ namespace osu.Framework.Graphics.Rendering.Deferred.Events
         SetScissor,
         SetScissorState,
         SetStencilInfo,
+        SetCullingInfo,
         SetViewport,
         SetBlend,
         SetBlendMask,

@@ -18,6 +18,7 @@ using Veldrid.OpenGLBindings;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vulkan;
+using FrontFace = Veldrid.FrontFace;
 using GraphicsBackend = Veldrid.GraphicsBackend;
 using PrimitiveTopology = Veldrid.PrimitiveTopology;
 using StencilOperation = Veldrid.StencilOperation;
@@ -224,6 +225,36 @@ namespace osu.Framework.Graphics.Veldrid
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(operation));
+            }
+        }
+
+        public static FaceCullMode ToFaceCullMode(this FaceCullingMode cullingMode)
+        {
+            switch (cullingMode)
+            {
+                case FaceCullingMode.Back:
+                    return FaceCullMode.Back;
+
+                case FaceCullingMode.Front:
+                    return FaceCullMode.Front;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(cullingMode));
+            }
+        }
+
+        public static FrontFace ToFrontFace(this Rendering.FrontFace frontFace)
+        {
+            switch (frontFace)
+            {
+                case Rendering.FrontFace.Clockwise:
+                    return FrontFace.Clockwise;
+
+                case Rendering.FrontFace.CounterClockwise:
+                    return FrontFace.CounterClockwise;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(frontFace));
             }
         }
 

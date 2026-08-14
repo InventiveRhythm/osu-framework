@@ -129,6 +129,11 @@ namespace osu.Framework.Graphics.Rendering
         StencilInfo CurrentStencilInfo { get; }
 
         /// <summary>
+        /// The current culling parameters.
+        /// </summary>
+        CullingInfo CurrentCullingInfo { get; }
+
+        /// <summary>
         /// The current horizontal texture wrap mode.
         /// </summary>
         WrapMode CurrentWrapModeS { get; }
@@ -331,6 +336,17 @@ namespace osu.Framework.Graphics.Rendering
         /// Restores the last stencil parameters.
         /// </summary>
         void PopStencilInfo();
+
+        /// <summary>
+        /// Applies new culling parameters.
+        /// </summary>
+        /// <param name="cullingInfo">The culling parameters.</param>
+        void PushCullingInfo(CullingInfo cullingInfo);
+
+        /// <summary>
+        /// Restores the last culling parameters.
+        /// </summary>
+        void PopCullingInfo();
 
         /// <summary>
         /// Schedules an expensive operation to a queue from which a maximum of one operation is performed per frame.
