@@ -152,6 +152,22 @@ namespace osu.Framework.Graphics.Veldrid.Pipelines
         }
 
         /// <summary>
+        /// Sets the active culling parameters.
+        /// </summary>
+        /// <param name="cullingInfo">The culling parameters.</param>
+        public void SetCullingInfo(CullingInfo cullingInfo)
+        {
+            if (!cullingInfo.Enabled)
+            {
+                pipelineDesc.RasterizerState.CullMode = FaceCullMode.None;
+                return;
+            }
+
+            pipelineDesc.RasterizerState.CullMode = cullingInfo.Mode.ToFaceCullMode();
+            pipelineDesc.RasterizerState.FrontFace = cullingInfo.FrontFace.ToFrontFace();
+        }
+
+        /// <summary>
         /// Sets the active framebuffer.
         /// </summary>
         /// <param name="frameBuffer">The framebuffer, or <c>null</c> to activate the back-buffer.</param>

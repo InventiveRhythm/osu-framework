@@ -363,6 +363,18 @@ namespace osu.Framework.Graphics.OpenGL
                 GL.Disable(EnableCap.StencilTest);
         }
 
+        protected override void SetCullingInfoImplementation(CullingInfo cullingInfo)
+        {
+            if (cullingInfo.Enabled)
+            {
+                GL.Enable(EnableCap.CullFace);
+                GL.CullFace(GLUtils.ToCullFaceMode(cullingInfo.Mode));
+                GL.FrontFace(GLUtils.ToFrontFaceDirection(cullingInfo.FrontFace));
+            }
+            else
+                GL.Disable(EnableCap.CullFace);
+        }
+
         protected internal override Image<Rgba32> TakeScreenshot()
         {
             var size = ((IGraphicsSurface)openGLSurface).GetDrawableSize();

@@ -73,6 +73,12 @@ namespace osu.Framework._3D.Rendering
                     function: BufferTestFunction.Always
                 ));
 
+                renderer.PushCullingInfo(new CullingInfo(
+                    cullFace: true,
+                    mode: FaceCullingMode.Back,
+                    frontFace: FrontFace.CounterClockwise
+                ));
+
                 renderer.PushViewport(new RectangleI(0, 0, (int)buffer.Size.X, (int)buffer.Size.Y));
                 buffer.Bind();
 
@@ -82,11 +88,6 @@ namespace osu.Framework._3D.Rendering
                 renderer.WhitePixel.Bind();
 
                 batch ??= renderer.CreateLinearBatch<TexturedVertex3D>(3 * 64, 1, PrimitiveTopology.Triangles);
-
-                renderer.PushProjectionMatrix(
-                    Matrix4.Identity
-                    * Matrix4.CreateFromQuaternion(Source.Camera.Rotation)
-                );
 
                 var s = Source.ScreenSpaceDrawQuad.Size;
 
@@ -100,12 +101,17 @@ namespace osu.Framework._3D.Rendering
                     CornerExponent = 2f,
                 }, true);
 
-                batch.Add(new TexturedVertex3D { Position = new Vector3(0f, 0.5f, 0), TexturePosition = new Vector2(0, 0) });
+                renderer.PushProjectionMatrix(
+                    Matrix4.Identity
+                    * Matrix4.CreateFromQuaternion(Source.Camera.Rotation)
+                );
+
                 batch.Add(new TexturedVertex3D { Position = new Vector3(0.5f, -0.5f, 0), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(0f, 0.5f, 0), TexturePosition = new Vector2(0, 0) });
                 batch.Add(new TexturedVertex3D { Position = new Vector3(-0.5f, -0.5f, 0), TexturePosition = new Vector2(0, 0) });
 
-                batch.Add(new TexturedVertex3D { Position = new Vector3(-0.5f, -0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
                 batch.Add(new TexturedVertex3D { Position = new Vector3(0f, 0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
+                batch.Add(new TexturedVertex3D { Position = new Vector3(-0.5f, -0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
                 batch.Add(new TexturedVertex3D { Position = new Vector3(0.5f, -0.5f, -.1f), TexturePosition = new Vector2(0, 0) });
 
                 batch.Draw();
@@ -117,6 +123,7 @@ namespace osu.Framework._3D.Rendering
                 buffer.Unbind();
 
                 renderer.PopViewport();
+                renderer.PopCullingInfo();
                 renderer.PopDepthInfo();
             }
 

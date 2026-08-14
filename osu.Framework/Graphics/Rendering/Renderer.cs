@@ -67,6 +67,7 @@ namespace osu.Framework.Graphics.Rendering
         public Matrix4 ProjectionMatrix { get; private set; }
         public DepthInfo CurrentDepthInfo { get; private set; }
         public StencilInfo CurrentStencilInfo { get; private set; }
+        public CullingInfo CurrentCullingInfo { get; private set; }
         public WrapMode CurrentWrapModeS { get; private set; }
         public WrapMode CurrentWrapModeT { get; private set; }
         public bool IsMaskingActive { get; private set; }
@@ -121,6 +122,7 @@ namespace osu.Framework.Graphics.Rendering
         private readonly Stack<RectangleI> scissorRectStack = new Stack<RectangleI>();
         private readonly Stack<DepthInfo> depthStack = new Stack<DepthInfo>();
         private readonly Stack<StencilInfo> stencilStack = new Stack<StencilInfo>();
+        private readonly Stack<CullingInfo> cullingStack = new Stack<CullingInfo>();
         private readonly Stack<Vector2I> scissorOffsetStack = new Stack<Vector2I>();
         private readonly Stack<IFrameBuffer> frameBufferStack = new Stack<IFrameBuffer>();
         private readonly Stack<IShader> shaderStack = new Stack<IShader>();
@@ -234,6 +236,7 @@ namespace osu.Framework.Graphics.Rendering
             frameBufferStack.Clear();
             depthStack.Clear();
             stencilStack.Clear();
+            cullingStack.Clear();
             scissorStateStack.Clear();
             scissorOffsetStack.Clear();
             shaderStack.Clear();
@@ -264,6 +267,7 @@ namespace osu.Framework.Graphics.Rendering
 
             PushDepthInfo(DepthInfo.Default);
             PushStencilInfo(StencilInfo.Default);
+            PushCullingInfo(CullingInfo.Default);
 
             Clear(new ClearInfo(Color4.Black));
 
@@ -681,6 +685,12 @@ namespace osu.Framework.Graphics.Rendering
             setStencilInfo(stencilInfo);
         }
 
+        public void PushCullingInfo(CullingInfo cullingInfo)
+        {
+            cullingStack.Push(cullingInfo);
+            setCullingInfo(cullingInfo);
+        }
+
         public void PopDepthInfo()
         {
             Trace.Assert(depthStack.Count > 1);
@@ -695,6 +705,14 @@ namespace osu.Framework.Graphics.Rendering
 
             stencilStack.Pop();
             setStencilInfo(stencilStack.Peek());
+        }
+
+        public void PopCullingInfo()
+        {
+            Trace.Assert(cullingStack.Count > 1);
+
+            cullingStack.Pop();
+            setCullingInfo(cullingStack.Peek());
         }
 
         private void setDepthInfo(DepthInfo depthInfo)
@@ -719,6 +737,17 @@ namespace osu.Framework.Graphics.Rendering
             CurrentStencilInfo = stencilInfo;
         }
 
+        private void setCullingInfo(CullingInfo cullingInfo)
+        {
+            if (CurrentCullingInfo.Equals(cullingInfo))
+                return;
+
+            FlushCurrentBatch(FlushBatchSource.SetCullingInfo);
+            SetCullingInfoImplementation(cullingInfo);
+
+            CurrentCullingInfo = cullingInfo;
+        }
+
         /// <summary>
         /// Updates the graphics device with new depth parameters.
         /// </summary>
@@ -730,6 +759,12 @@ namespace osu.Framework.Graphics.Rendering
         /// </summary>
         /// <param name="stencilInfo">The stencil parameters to use.</param>
         protected abstract void SetStencilInfoImplementation(StencilInfo stencilInfo);
+
+        /// <summary>
+        /// Updates the graphics device with new culling parameters.
+        /// </summary>
+        /// <param name="cullingInfo">The culling parameters to use.</param>
+        protected abstract void SetCullingInfoImplementation(CullingInfo cullingInfo);
 
         #endregion
 
