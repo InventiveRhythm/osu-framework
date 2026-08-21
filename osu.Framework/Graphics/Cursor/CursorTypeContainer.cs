@@ -12,7 +12,7 @@ namespace osu.Framework.Graphics.Cursor
         [Resolved]
         private GameHost host { get; set; } = null!;
 
-        public CursorType LastCursorType = CursorType.Arrow;
+        public CursorType LastCursorType { get; private set; } = CursorType.Arrow;
 
         protected override void Update()
         {
