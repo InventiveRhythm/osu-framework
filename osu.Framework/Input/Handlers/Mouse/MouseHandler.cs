@@ -25,7 +25,7 @@ namespace osu.Framework.Input.Handlers.Mouse
         /// <summary>
         /// Whether relative mode should be preferred when the window has focus, the cursor is contained and the OS cursor is not visible.
         /// </summary>
-        public BindableBool UseRelativeMode { get; } = new BindableBool(true)
+        public BindableBool UseRelativeMode { get; } = new BindableBool(false)
         {
             Description = "Allows for sensitivity adjustment and tighter control of input",
         };
