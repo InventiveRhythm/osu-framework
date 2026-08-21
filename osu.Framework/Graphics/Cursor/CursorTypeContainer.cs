@@ -12,7 +12,7 @@ namespace osu.Framework.Graphics.Cursor
         [Resolved]
         private GameHost host { get; set; } = null!;
 
-        private CursorType last = CursorType.Arrow;
+        public CursorType LastCursorType = CursorType.Arrow;
 
         protected override void Update()
         {
@@ -21,11 +21,11 @@ namespace osu.Framework.Graphics.Cursor
             var valid = FindTargets();
             var current = valid.FirstOrDefault(x => x.Cursor != CursorType.Ignore)?.Cursor ?? CursorType.Arrow;
 
-            if (current == last)
+            if (current == LastCursorType)
                 return;
 
             host.Window.ChangeCursor(current);
-            last = current;
+            LastCursorType = current;
         }
     }
 }
