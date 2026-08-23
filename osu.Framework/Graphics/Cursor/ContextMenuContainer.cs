@@ -71,6 +71,7 @@ namespace osu.Framework.Graphics.Cursor
             {
                 case MouseButton.Right:
                     var (target, items) = FindTargets()
+                                          .Where(x => !x.ContextRequireShift || e.ShiftPressed)
                                           .Select(t => (target: t, items: t.ContextMenuItems))
                                           .FirstOrDefault(result => result.items != null);
 

@@ -15,5 +15,10 @@ namespace osu.Framework.Graphics.Cursor
         /// <para>If null, this <see cref="Drawable"/> will not be picked as the menu target and other <see cref="Drawable"/>s underneath may become the menu target.</para>
         /// </remarks>
         MenuItem[]? ContextMenuItems { get; }
+
+        /// <summary>
+        /// Requires the shift key to be pressed to access this context menu.
+        /// </summary>
+        bool ContextRequireShift => false;
     }
 }
