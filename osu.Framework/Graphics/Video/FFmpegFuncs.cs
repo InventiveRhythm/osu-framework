@@ -70,6 +70,10 @@ namespace osu.Framework.Graphics.Video
 
         public delegate int AvcodecSendPacketDelegate(AVCodecContext* avctx, AVPacket* avpkt);
 
+        public delegate byte* AvPacketGetSideDataDelegate(AVPacket* pkt, AVPacketSideDataType type, int* size);
+
+        public delegate int AvNewPacketDelegate(AVPacket* pkt, int size);
+
         public delegate void AvcodecFlushBuffersDelegate(AVCodecContext* avctx);
 
         public delegate AVFormatContext* AvformatAllocContextDelegate();
@@ -125,6 +129,8 @@ namespace osu.Framework.Graphics.Video
         public AvcodecOpen2Delegate avcodec_open2;
         public AvcodecReceiveFrameDelegate avcodec_receive_frame;
         public AvcodecSendPacketDelegate avcodec_send_packet;
+        public AvPacketGetSideDataDelegate av_packet_get_side_data;
+        public AvNewPacketDelegate av_new_packet;
         public AvcodecFlushBuffersDelegate avcodec_flush_buffers;
         public AvformatAllocContextDelegate avformat_alloc_context;
         public AvformatCloseInputDelegate avformat_close_input;

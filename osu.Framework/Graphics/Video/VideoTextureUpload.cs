@@ -13,13 +13,19 @@ namespace osu.Framework.Graphics.Video
     {
         public AVFrame* Frame => ffmpegFrame.Pointer;
 
+        public bool HasAlpha => ((AVPixelFormat)Frame->format).HasAlpha();
+
         public int GetPlaneWidth(uint plane)
         {
+            if (plane == 3) return Frame->width;
+
             return (plane == 0) ? Frame->width : (Frame->width + 1) / 2;
         }
 
         public int GetPlaneHeight(uint plane)
         {
+            if (plane == 3) return Frame->height;
+
             return (plane == 0) ? Frame->height : (Frame->height + 1) / 2;
         }
 
