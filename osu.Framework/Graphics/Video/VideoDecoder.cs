@@ -71,6 +71,8 @@ namespace osu.Framework.Graphics.Video
         /// </summary>
         public readonly Bindable<HardwareVideoDecoder> TargetHardwareVideoDecoders = new Bindable<HardwareVideoDecoder>();
 
+        private static readonly Dictionary<AVHWDeviceType, IntPtr> hw_device_contexts = new();
+
         // libav-context-related
         private AVFormatContext* formatContext;
         private AVIOContext* ioContext;
@@ -111,21 +113,55 @@ namespace osu.Framework.Graphics.Video
 
         static VideoDecoder()
         {
-            if (RuntimeInfo.OS == RuntimeInfo.Platform.Linux)
-            {
-                void loadVersionedLibraryGlobally(string name)
-                {
-                    int version = FFmpeg.AutoGen.ffmpeg.LibraryVersionMap[name];
-                    Library.Load($"lib{name}.so.{version}", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
-                }
+            PreloadLibraries();
+        }
 
-                // FFmpeg.AutoGen doesn't load libraries as RTLD_GLOBAL, so we must load them ourselves to fix inter-library dependencies
-                // otherwise they would fallback to the system-installed libraries that can differ in version installed.
-                loadVersionedLibraryGlobally("avutil");
-                loadVersionedLibraryGlobally("avcodec");
-                loadVersionedLibraryGlobally("avformat");
-                loadVersionedLibraryGlobally("swscale");
+        public static void PreloadLibraries()
+        {
+            string[] libraries = ["avutil", "avcodec", "avformat", "swscale"];
+
+            // FFmpeg.AutoGen doesn't load libraries as RTLD_GLOBAL, so we must load them ourselves to fix inter-library dependencies
+            // otherwise they would fallback to the system-installed libraries that can differ in version installed.
+            foreach (string name in libraries)
+            {
+                int version = FFmpeg.AutoGen.ffmpeg.LibraryVersionMap[name];
+
+                switch (RuntimeInfo.OS)
+                {
+                    case RuntimeInfo.Platform.Linux:
+                        Library.Load($"lib{name}.so.{version}", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+                        break;
+
+                    case RuntimeInfo.Platform.macOS:
+                        NativeLibrary.Load($"{name}.{version}", RuntimeInfo.EntryAssembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories);
+                        break;
+
+                    case RuntimeInfo.Platform.Windows:
+                        NativeLibrary.Load($"{name}-{version}", RuntimeInfo.EntryAssembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories);
+                        break;
+                }
             }
+
+            foreach (AVHWDeviceType hwDeviceType in Enum.GetValues<AVHWDeviceType>())
+            {
+                if (hwDeviceType == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+                    continue;
+
+                AVBufferRef* hwDeviceCtx = null;
+                if (FFmpeg.AutoGen.ffmpeg.av_hwdevice_ctx_create(&hwDeviceCtx, hwDeviceType, null, null, 0) == 0)
+                    hw_device_contexts[hwDeviceType] = (IntPtr)hwDeviceCtx;
+            }
+        }
+
+        public static void UnloadLibraries()
+        {
+            foreach (var (_, ptr) in hw_device_contexts)
+            {
+                var ctx = (AVBufferRef*)ptr;
+                FFmpeg.AutoGen.ffmpeg.av_buffer_unref(&ctx);
+            }
+
+            hw_device_contexts.Clear();
         }
 
         /// <summary>
@@ -418,15 +454,19 @@ namespace osu.Framework.Graphics.Video
                 // initialize hardware decode context.
                 if (hwDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
                 {
-                    int hwDeviceCreateResult = ffmpeg.av_hwdevice_ctx_create(&codecContext->hw_device_ctx, hwDeviceType, null, null, 0);
-
-                    if (hwDeviceCreateResult < 0)
+                    if (!hw_device_contexts.TryGetValue(hwDeviceType, out var cachedCtx))
                     {
-                        Logger.Log($"Couldn't create hardware video decoder context {hwDeviceType} for codec {decoder.Name}: {getErrorMessage(hwDeviceCreateResult)}");
+                        Logger.Log($"Couldn't create hardware device context found for {hwDeviceType}, skipping {decoder.Name}");
                         continue;
                     }
 
-                    Logger.Log($"Successfully opened hardware video decoder context {hwDeviceType} for codec {decoder.Name}");
+                    codecContext->hw_device_ctx = ffmpeg.av_buffer_ref((AVBufferRef*)cachedCtx);
+
+                    if (codecContext->hw_device_ctx == null)
+                    {
+                        Logger.Log($"Failed to reference hardware device context for {hwDeviceType}, skipping {decoder.Name}");
+                        continue;
+                    }
                 }
 
                 int openCodecResult = ffmpeg.avcodec_open2(codecContext, decoder.Pointer, null);
@@ -873,6 +913,7 @@ namespace osu.Framework.Graphics.Video
                 av_codec_is_decoder = FFmpeg.AutoGen.ffmpeg.av_codec_is_decoder,
                 avcodec_get_hw_config = FFmpeg.AutoGen.ffmpeg.avcodec_get_hw_config,
                 avcodec_alloc_context3 = FFmpeg.AutoGen.ffmpeg.avcodec_alloc_context3,
+                av_buffer_ref = FFmpeg.AutoGen.ffmpeg.av_buffer_ref,
                 avcodec_free_context = FFmpeg.AutoGen.ffmpeg.avcodec_free_context,
                 avcodec_parameters_to_context = FFmpeg.AutoGen.ffmpeg.avcodec_parameters_to_context,
                 avcodec_open2 = FFmpeg.AutoGen.ffmpeg.avcodec_open2,
