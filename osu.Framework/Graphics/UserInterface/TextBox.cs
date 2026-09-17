@@ -110,7 +110,7 @@ namespace osu.Framework.Graphics.UserInterface
                 var currentNumberFormat = CultureInfo.CurrentCulture.NumberFormat;
 
                 validNumericalCharacter |= char.IsAsciiDigit(character);
-                validNumericalCharacter |= selectionLeft == 0 && currentNumberFormat.NegativeSign.Contains(character);
+                validNumericalCharacter |= SelectionLeft == 0 && currentNumberFormat.NegativeSign.Contains(character);
 
                 if (InputProperties.Type == TextInputType.Decimal)
                     validNumericalCharacter |= currentNumberFormat.NumberDecimalSeparator.Contains(character);
@@ -311,7 +311,7 @@ namespace osu.Framework.Graphics.UserInterface
                 case PlatformAction.MoveBackwardChar:
                     if (hasSelection)
                     {
-                        MoveCursorBy(selectionLeft - selectionEnd);
+                        MoveCursorBy(SelectionLeft - selectionEnd);
                     }
                     else
                     {
@@ -335,7 +335,7 @@ namespace osu.Framework.Graphics.UserInterface
                 case PlatformAction.MoveBackwardWord:
                     if (hasSelection)
                     {
-                        MoveCursorBy(selectionLeft - selectionEnd);
+                        MoveCursorBy(SelectionLeft - selectionEnd);
                     }
                     else
                     {
@@ -644,7 +644,7 @@ namespace osu.Framework.Graphics.UserInterface
 
             float cursorPos = 0;
             if (text.Length > 0)
-                cursorPos = getPositionAt(selectionLeft);
+                cursorPos = getPositionAt(SelectionLeft);
 
             float cursorPosEnd = getPositionAt(selectionEnd);
 
@@ -742,7 +742,7 @@ namespace osu.Framework.Graphics.UserInterface
         private int selectionLength => Math.Abs(selectionEnd - selectionStart);
         private bool hasSelection => selectionLength > 0;
 
-        private int selectionLeft => Math.Min(selectionStart, selectionEnd);
+        public int SelectionLeft => Math.Min(selectionStart, selectionEnd);
         private int selectionRight => Math.Max(selectionStart, selectionEnd);
 
         private readonly Cached cursorAndLayout = new Cached();
@@ -764,10 +764,10 @@ namespace osu.Framework.Graphics.UserInterface
                     if (offset > 0)
                         selectionEnd = selectionStart = selectionRight;
                     else
-                        selectionEnd = selectionStart = selectionLeft;
+                        selectionEnd = selectionStart = SelectionLeft;
                 }
                 else
-                    selectionEnd = selectionStart = Math.Clamp((offset > 0 ? selectionRight : selectionLeft) + offset, 0, text.Length);
+                    selectionEnd = selectionStart = Math.Clamp((offset > 0 ? selectionRight : SelectionLeft) + offset, 0, text.Length);
             }
 
             if (oldStart != selectionStart || oldEnd != selectionEnd)
@@ -886,18 +886,18 @@ namespace osu.Framework.Graphics.UserInterface
             // Remove all characters to the right and store them in a local list,
             // such that their depth can be updated.
             List<Drawable> charsRight = new List<Drawable>();
-            foreach (Drawable d in TextFlow.Children.Skip(selectionLeft))
+            foreach (Drawable d in TextFlow.Children.Skip(SelectionLeft))
                 charsRight.Add(d);
             TextFlow.RemoveRange(charsRight, false);
 
             // Update their depth to make room for the to-be inserted character.
-            int i = selectionLeft;
+            int i = SelectionLeft;
             foreach (Drawable d in charsRight)
                 d.Depth = getDepthForCharacterIndex(i++);
 
             // Add the character
             Drawable ch = GetDrawableCharacter(c);
-            ch.Depth = getDepthForCharacterIndex(selectionLeft);
+            ch.Depth = getDepthForCharacterIndex(SelectionLeft);
 
             TextFlow.Add(ch);
 
@@ -963,9 +963,9 @@ namespace osu.Framework.Graphics.UserInterface
                 drawable.Show();
                 drawableCreationParameters?.Invoke(drawable);
 
-                text = text.Insert(selectionLeft, c.ToString());
+                text = text.Insert(SelectionLeft, c.ToString());
 
-                selectionStart = selectionEnd = selectionLeft + 1;
+                selectionStart = selectionEnd = SelectionLeft + 1;
                 ignoreOngoingDragSelection = true;
 
                 cursorAndLayout.Invalidate();
@@ -1165,7 +1165,7 @@ namespace osu.Framework.Graphics.UserInterface
             cursorAndLayout.Invalidate();
         }
 
-        public string SelectedText => hasSelection ? Text.Substring(selectionLeft, selectionLength) : string.Empty;
+        public string SelectedText => hasSelection ? Text.Substring(SelectionLeft, selectionLength) : string.Empty;
 
         /// <summary>
         /// Whether <see cref="KeyDownEvent"/>s should be blocked because of recent text input from a <see cref="TextInputSource"/>.
@@ -1699,7 +1699,7 @@ namespace osu.Framework.Graphics.UserInterface
             {
                 // this is the start of a new composition, as we currently have no composition text.
 
-                imeCompositionStart = selectionLeft;
+                imeCompositionStart = SelectionLeft;
 
                 if (string.IsNullOrEmpty(newComposition))
                 {
@@ -1821,7 +1821,7 @@ namespace osu.Framework.Graphics.UserInterface
             }
             else
             {
-                startIndex = selectionLeft;
+                startIndex = SelectionLeft;
                 endIndex = selectionRight;
             }
 
