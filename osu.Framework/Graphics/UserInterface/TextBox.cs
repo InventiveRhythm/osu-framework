@@ -309,9 +309,9 @@ namespace osu.Framework.Graphics.UserInterface
 
                 // Cursor Manipulation
                 case PlatformAction.MoveBackwardChar:
-                    if (hasSelection)
+                    if (HasSelection)
                     {
-                        MoveCursorBy(SelectionLeft - selectionEnd);
+                        MoveCursorBy(SelectionLeft - SelectionEnd);
                     }
                     else
                     {
@@ -321,9 +321,9 @@ namespace osu.Framework.Graphics.UserInterface
                     return true;
 
                 case PlatformAction.MoveForwardChar:
-                    if (hasSelection)
+                    if (HasSelection)
                     {
-                        MoveCursorBy(selectionRight - selectionEnd);
+                        MoveCursorBy(SelectionRight - SelectionEnd);
                     }
                     else
                     {
@@ -333,9 +333,9 @@ namespace osu.Framework.Graphics.UserInterface
                     return true;
 
                 case PlatformAction.MoveBackwardWord:
-                    if (hasSelection)
+                    if (HasSelection)
                     {
-                        MoveCursorBy(SelectionLeft - selectionEnd);
+                        MoveCursorBy(SelectionLeft - SelectionEnd);
                     }
                     else
                     {
@@ -345,9 +345,9 @@ namespace osu.Framework.Graphics.UserInterface
                     return true;
 
                 case PlatformAction.MoveForwardWord:
-                    if (hasSelection)
+                    if (HasSelection)
                     {
-                        MoveCursorBy(selectionRight - selectionEnd);
+                        MoveCursorBy(SelectionRight - SelectionEnd);
                     }
                     else
                     {
@@ -439,8 +439,8 @@ namespace osu.Framework.Graphics.UserInterface
             if (!HasFocus)
                 return false;
 
-            selectionStart = 0;
-            selectionEnd = text.Length;
+            SelectionStart = 0;
+            SelectionEnd = text.Length;
             cursorAndLayout.Invalidate();
             return true;
         }
@@ -453,7 +453,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (!AllowWordNavigation)
                 return -1;
 
-            return findNextWord(text, selectionEnd, -1) - selectionEnd;
+            return findNextWord(text, SelectionEnd, -1) - SelectionEnd;
         }
 
         /// <summary>
@@ -464,7 +464,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (!AllowWordNavigation)
                 return 1;
 
-            return findNextWord(text, selectionEnd, 1) - selectionEnd;
+            return findNextWord(text, SelectionEnd, 1) - SelectionEnd;
         }
 
         /// <summary>
@@ -548,7 +548,7 @@ namespace osu.Framework.Graphics.UserInterface
         protected void MoveCursorBy(int amount)
         {
             var lastSelectionBounds = getTextSelectionBounds();
-            selectionStart = selectionEnd;
+            SelectionStart = SelectionEnd;
             cursorAndLayout.Invalidate();
             moveSelection(amount, false);
             onTextDeselected(lastSelectionBounds);
@@ -569,10 +569,10 @@ namespace osu.Framework.Graphics.UserInterface
         /// </summary>
         protected void DeleteBy(int amount)
         {
-            if (selectionLength == 0)
-                selectionEnd = Math.Clamp(selectionStart + amount, 0, text.Length);
+            if (SelectionLength == 0)
+                SelectionEnd = Math.Clamp(SelectionStart + amount, 0, text.Length);
 
-            if (hasSelection)
+            if (HasSelection)
             {
                 string removedText = removeSelection();
                 OnUserTextRemoved(removedText);
@@ -646,11 +646,11 @@ namespace osu.Framework.Graphics.UserInterface
             if (text.Length > 0)
                 cursorPos = getPositionAt(SelectionLeft);
 
-            float cursorPosEnd = getPositionAt(selectionEnd);
+            float cursorPosEnd = getPositionAt(SelectionEnd);
 
             float? selectionWidth = null;
-            if (hasSelection)
-                selectionWidth = getPositionAt(selectionRight) - cursorPos;
+            if (HasSelection)
+                selectionWidth = getPositionAt(SelectionRight) - cursorPos;
 
             float cursorRelativePositionAxesInBox = (cursorPosEnd - textContainerPosX) / (DrawWidth - 2 * LeftRightPadding);
 
@@ -736,14 +736,14 @@ namespace osu.Framework.Graphics.UserInterface
             return i;
         }
 
-        private int selectionStart;
-        private int selectionEnd;
+        public int SelectionStart { get; private set; }
+        public int SelectionEnd { get; private set; }
 
-        private int selectionLength => Math.Abs(selectionEnd - selectionStart);
-        private bool hasSelection => selectionLength > 0;
+        public int SelectionLength => Math.Abs(SelectionEnd - SelectionStart);
+        public bool HasSelection => SelectionLength > 0;
 
-        public int SelectionLeft => Math.Min(selectionStart, selectionEnd);
-        private int selectionRight => Math.Max(selectionStart, selectionEnd);
+        public int SelectionLeft => Math.Min(SelectionStart, SelectionEnd);
+        public int SelectionRight => Math.Max(SelectionStart, SelectionEnd);
 
         private readonly Cached cursorAndLayout = new Cached();
 
@@ -751,26 +751,26 @@ namespace osu.Framework.Graphics.UserInterface
         {
             if (textInput.ImeActive) return;
 
-            int oldStart = selectionStart;
-            int oldEnd = selectionEnd;
+            int oldStart = SelectionStart;
+            int oldEnd = SelectionEnd;
 
             if (expand)
-                selectionEnd = Math.Clamp(selectionEnd + offset, 0, text.Length);
+                SelectionEnd = Math.Clamp(SelectionEnd + offset, 0, text.Length);
             else
             {
-                if (hasSelection && Math.Abs(offset) <= 1)
+                if (HasSelection && Math.Abs(offset) <= 1)
                 {
                     //we don't want to move the location when "removing" an existing selection, just set the new location.
                     if (offset > 0)
-                        selectionEnd = selectionStart = selectionRight;
+                        SelectionEnd = SelectionStart = SelectionRight;
                     else
-                        selectionEnd = selectionStart = SelectionLeft;
+                        SelectionEnd = SelectionStart = SelectionLeft;
                 }
                 else
-                    selectionEnd = selectionStart = Math.Clamp((offset > 0 ? selectionRight : SelectionLeft) + offset, 0, text.Length);
+                    SelectionEnd = SelectionStart = Math.Clamp((offset > 0 ? SelectionRight : SelectionLeft) + offset, 0, text.Length);
             }
 
-            if (oldStart != selectionStart || oldEnd != selectionEnd)
+            if (oldStart != SelectionStart || oldEnd != SelectionEnd)
             {
                 OnCaretMoved(expand);
                 cursorAndLayout.Invalidate();
@@ -817,7 +817,7 @@ namespace osu.Framework.Graphics.UserInterface
         /// <summary>
         /// Removes the selected text if a selection persists.
         /// </summary>
-        private string removeSelection() => removeCharacters(selectionLength);
+        private string removeSelection() => removeCharacters(SelectionLength);
 
         /// <summary>
         /// Removes a specified <paramref name="number"/> of characters left side of the current position.
@@ -831,13 +831,13 @@ namespace osu.Framework.Graphics.UserInterface
             if (Current.Disabled || text.Length == 0)
                 return string.Empty;
 
-            int removeStart = Math.Clamp(selectionRight - number, 0, selectionRight);
-            int removeCount = selectionRight - removeStart;
+            int removeStart = Math.Clamp(SelectionRight - number, 0, SelectionRight);
+            int removeCount = SelectionRight - removeStart;
 
             if (removeCount == 0)
                 return string.Empty;
 
-            Debug.Assert(selectionLength == 0 || removeCount == selectionLength);
+            Debug.Assert(SelectionLength == 0 || removeCount == SelectionLength);
 
             bool beganChange = beginTextChange();
 
@@ -862,7 +862,7 @@ namespace osu.Framework.Graphics.UserInterface
             for (int i = removeStart; i < TextFlow.Count; i++)
                 TextFlow.ChangeChildDepth(TextFlow[i], getDepthForCharacterIndex(i));
 
-            selectionStart = selectionEnd = removeStart;
+            SelectionStart = SelectionEnd = removeStart;
             doubleClickWord = null;
 
             endTextChange(beganChange);
@@ -949,7 +949,7 @@ namespace osu.Framework.Graphics.UserInterface
                     continue;
                 }
 
-                if (hasSelection)
+                if (HasSelection)
                     removeSelection();
 
                 if (text.Length + 1 > LengthLimit)
@@ -965,7 +965,7 @@ namespace osu.Framework.Graphics.UserInterface
 
                 text = text.Insert(SelectionLeft, c.ToString());
 
-                selectionStart = selectionEnd = SelectionLeft + 1;
+                SelectionStart = SelectionEnd = SelectionLeft + 1;
                 ignoreOngoingDragSelection = true;
 
                 cursorAndLayout.Invalidate();
@@ -1028,10 +1028,10 @@ namespace osu.Framework.Graphics.UserInterface
 
         private void onTextSelectionChanged(TextSelectionType selectionType, (int start, int end) lastSelectionBounds)
         {
-            if (lastSelectionBounds.start == selectionStart && lastSelectionBounds.end == selectionEnd)
+            if (lastSelectionBounds.start == SelectionStart && lastSelectionBounds.end == SelectionEnd)
                 return;
 
-            if (hasSelection)
+            if (HasSelection)
                 OnTextSelectionChanged(selectionType);
             else
                 onTextDeselected(lastSelectionBounds);
@@ -1039,14 +1039,14 @@ namespace osu.Framework.Graphics.UserInterface
 
         private void onTextDeselected((int start, int end) lastSelectionBounds)
         {
-            if (lastSelectionBounds.start == selectionStart && lastSelectionBounds.end == selectionEnd)
+            if (lastSelectionBounds.start == SelectionStart && lastSelectionBounds.end == SelectionEnd)
                 return;
 
             if (lastSelectionBounds.start != lastSelectionBounds.end)
                 OnTextDeselected();
         }
 
-        private (int start, int end) getTextSelectionBounds() => (selectionStart, selectionEnd);
+        private (int start, int end) getTextSelectionBounds() => (SelectionStart, SelectionEnd);
 
         /// <summary>
         /// Invoked whenever the IME composition has changed.
@@ -1097,7 +1097,7 @@ namespace osu.Framework.Graphics.UserInterface
             // a blinking cursor signals to the user that keyboard input will appear at that cursor,
             // hide the caret when we don't have keyboard focus to conform with that expectation.
             // importantly, we want the caret to remain visible when there is a selection.
-            bool newVisibility = HasFocus && (isActive.Value || selectionLength != 0);
+            bool newVisibility = HasFocus && (isActive.Value || SelectionLength != 0);
 
             if (caretVisible != newVisibility)
             {
@@ -1153,7 +1153,7 @@ namespace osu.Framework.Graphics.UserInterface
             // `FinalizeImeComposition()` crashes if textbox isn't fully loaded.
             if (IsLoaded) FinalizeImeComposition(false);
 
-            selectionStart = selectionEnd = 0;
+            SelectionStart = SelectionEnd = 0;
 
             TextFlow?.Clear();
             text = string.Empty;
@@ -1165,7 +1165,7 @@ namespace osu.Framework.Graphics.UserInterface
             cursorAndLayout.Invalidate();
         }
 
-        public string SelectedText => hasSelection ? Text.Substring(SelectionLeft, selectionLength) : string.Empty;
+        public string SelectedText => HasSelection ? Text.Substring(SelectionLeft, SelectionLength) : string.Empty;
 
         /// <summary>
         /// Whether <see cref="KeyDownEvent"/>s should be blocked because of recent text input from a <see cref="TextInputSource"/>.
@@ -1314,29 +1314,29 @@ namespace osu.Framework.Graphics.UserInterface
                 //select words at a time
                 if (getCharacterClosestTo(e.MousePosition) > doubleClickWord[1])
                 {
-                    selectionStart = doubleClickWord[0];
-                    selectionEnd = findSeparatorIndex(text, getCharacterClosestTo(e.MousePosition) - 1, 1);
-                    selectionEnd = selectionEnd >= 0 ? selectionEnd : text.Length;
+                    SelectionStart = doubleClickWord[0];
+                    SelectionEnd = findSeparatorIndex(text, getCharacterClosestTo(e.MousePosition) - 1, 1);
+                    SelectionEnd = SelectionEnd >= 0 ? SelectionEnd : text.Length;
                 }
                 else if (getCharacterClosestTo(e.MousePosition) < doubleClickWord[0])
                 {
-                    selectionStart = doubleClickWord[1];
-                    selectionEnd = findSeparatorIndex(text, getCharacterClosestTo(e.MousePosition), -1);
-                    selectionEnd = selectionEnd >= 0 ? selectionEnd + 1 : 0;
+                    SelectionStart = doubleClickWord[1];
+                    SelectionEnd = findSeparatorIndex(text, getCharacterClosestTo(e.MousePosition), -1);
+                    SelectionEnd = SelectionEnd >= 0 ? SelectionEnd + 1 : 0;
                 }
                 else
                 {
                     //in the middle
-                    selectionStart = doubleClickWord[0];
-                    selectionEnd = doubleClickWord[1];
+                    SelectionStart = doubleClickWord[0];
+                    SelectionEnd = doubleClickWord[1];
                 }
             }
             else
             {
                 if (text.Length == 0) return;
 
-                selectionEnd = getCharacterClosestTo(e.MousePosition);
-                if (hasSelection)
+                SelectionEnd = getCharacterClosestTo(e.MousePosition);
+                if (HasSelection)
                     GetContainingFocusManager().AsNonNull().ChangeFocus(this);
             }
 
@@ -1364,17 +1364,17 @@ namespace osu.Framework.Graphics.UserInterface
                 int lastSeparator = findSeparatorIndex(text, hover, -1);
                 int nextSeparator = findSeparatorIndex(text, hover, 1);
 
-                selectionStart = lastSeparator >= 0 ? lastSeparator + 1 : 0;
-                selectionEnd = nextSeparator >= 0 ? nextSeparator : text.Length;
+                SelectionStart = lastSeparator >= 0 ? lastSeparator + 1 : 0;
+                SelectionEnd = nextSeparator >= 0 ? nextSeparator : text.Length;
             }
             else
             {
-                selectionStart = 0;
-                selectionEnd = text.Length;
+                SelectionStart = 0;
+                SelectionEnd = text.Length;
             }
 
             //in order to keep the home word selected
-            doubleClickWord = new[] { selectionStart, selectionEnd };
+            doubleClickWord = new[] { SelectionStart, SelectionEnd };
 
             cursorAndLayout.Invalidate();
 
@@ -1422,7 +1422,7 @@ namespace osu.Framework.Graphics.UserInterface
                 return true;
             }
 
-            selectionStart = selectionEnd = getCharacterClosestTo(e.MousePosition);
+            SelectionStart = SelectionEnd = getCharacterClosestTo(e.MousePosition);
 
             cursorAndLayout.Invalidate();
 
@@ -1692,8 +1692,8 @@ namespace osu.Framework.Graphics.UserInterface
             }
 
             // used for tracking the selection to report for `OnImeComposition()`
-            int oldStart = selectionStart;
-            int oldEnd = selectionEnd;
+            int oldStart = SelectionStart;
+            int oldEnd = SelectionEnd;
 
             if (imeCompositionLength == 0)
             {
@@ -1718,7 +1718,7 @@ namespace osu.Framework.Graphics.UserInterface
                     return;
                 }
 
-                if (hasSelection)
+                if (HasSelection)
                     removeSelection();
             }
 
@@ -1739,8 +1739,8 @@ namespace osu.Framework.Graphics.UserInterface
             // remove the characters that don't match
             if (removeCount > 0)
             {
-                selectionStart = imeCompositionStart + matchBeginning;
-                selectionEnd = selectionStart + removeCount;
+                SelectionStart = imeCompositionStart + matchBeginning;
+                SelectionEnd = SelectionStart + removeCount;
                 removeSelection();
 
                 imeCompositionDrawables.RemoveRange(matchBeginning, removeCount);
@@ -1754,7 +1754,7 @@ namespace osu.Framework.Graphics.UserInterface
                 string addedText = newComposition.Substring(matchBeginning, addCount);
 
                 // set up selection for `insertString`
-                selectionStart = selectionEnd = imeCompositionStart + matchBeginning;
+                SelectionStart = SelectionEnd = imeCompositionStart + matchBeginning;
 
                 int insertPosition = matchBeginning;
                 insertString(addedText, d =>
@@ -1766,10 +1766,10 @@ namespace osu.Framework.Graphics.UserInterface
 
             // update the selection to the one the IME requested.
             // this selection is only a hint to the user, and is not used in the compositing logic.
-            selectionStart = imeCompositionStart + newSelectionStart;
-            selectionEnd = selectionStart + newSelectionLength;
+            SelectionStart = imeCompositionStart + newSelectionStart;
+            SelectionEnd = SelectionStart + newSelectionLength;
 
-            if (userEvent) OnImeComposition(newComposition, removeCount, addCount, oldStart != selectionStart || oldEnd != selectionEnd);
+            if (userEvent) OnImeComposition(newComposition, removeCount, addCount, oldStart != SelectionStart || oldEnd != SelectionEnd);
 
             endTextChange(beganChange);
             cursorAndLayout.Invalidate();
@@ -1793,7 +1793,7 @@ namespace osu.Framework.Graphics.UserInterface
                 }
 
                 // move the cursor to end of finalized composition.
-                selectionStart = selectionEnd = imeCompositionStart + imeCompositionLength;
+                SelectionStart = SelectionEnd = imeCompositionStart + imeCompositionLength;
 
                 if (userEvent) OnImeResult(text.Substring(imeCompositionStart, imeCompositionLength), successful);
             }
@@ -1822,7 +1822,7 @@ namespace osu.Framework.Graphics.UserInterface
             else
             {
                 startIndex = SelectionLeft;
-                endIndex = selectionRight;
+                endIndex = SelectionRight;
             }
 
             float start = getPositionAt(startIndex) - textContainerPosX + LeftRightPadding;
