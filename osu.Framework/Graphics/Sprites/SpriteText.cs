@@ -116,10 +116,7 @@ namespace osu.Framework.Graphics.Sprites
 
                 text = value;
 
-                if (localisedText != null)
-                {
-                    localisedText.Text = value;
-                }
+                localisedText?.Text = value;
             }
         }
 
@@ -578,7 +575,7 @@ namespace osu.Framework.Graphics.Sprites
         /// <summary>
         /// The character to fallback to use if a character glyph lookup failed.
         /// </summary>
-        protected virtual char FallbackCharacter => '?';
+        protected virtual char FallbackCharacter => '•';
 
         private readonly LayoutValue<TextBuilder> textBuilderCache = new LayoutValue<TextBuilder>(Invalidation.DrawSize, InvalidationSource.Parent);
 
