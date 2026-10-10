@@ -76,7 +76,7 @@ namespace osu.Framework.Graphics.Textures
 
         private static bool stbiNotFound;
 
-        internal static readonly DecoderOptions DECODER_OPTIONS = new DecoderOptions
+        public static readonly DecoderOptions DECODER_OPTIONS = new DecoderOptions
         {
             Configuration = new SixLabors.ImageSharp.Configuration(
                 new PngConfigurationModule(),
@@ -87,7 +87,7 @@ namespace osu.Framework.Graphics.Textures
             )
         };
 
-        internal static Image<TPixel> LoadFromStream<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel>
+        public static Image<TPixel> LoadFromStream<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel>
         {
             if (loadUsingStbi(stream, out Image<TPixel> loadPixelData))
                 return loadPixelData;
