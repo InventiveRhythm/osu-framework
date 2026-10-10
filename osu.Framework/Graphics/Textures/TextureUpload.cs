@@ -6,11 +6,18 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using osu.Framework.Extensions.ImageExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Logging;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StbiSharp;
@@ -69,10 +76,30 @@ namespace osu.Framework.Graphics.Textures
 
         private static bool stbiNotFound;
 
+        internal static readonly DecoderOptions DECODER_OPTIONS = new DecoderOptions
+        {
+            Configuration = new SixLabors.ImageSharp.Configuration(
+                new PngConfigurationModule(),
+                new JpegConfigurationModule(),
+                new GifConfigurationModule(),
+                new BmpConfigurationModule(),
+                new WebpConfigurationModule()
+            )
+        };
+
         internal static Image<TPixel> LoadFromStream<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel>
         {
+            if (loadUsingStbi(stream, out Image<TPixel> loadPixelData))
+                return loadPixelData;
+
+            return Image.Load<TPixel>(DECODER_OPTIONS, stream);
+        }
+
+        private static bool loadUsingStbi<TPixel>(Stream stream, [CanBeNull] out Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel>
+        {
+            image = null;
             if (stbiNotFound)
-                return Image.Load<TPixel>(stream);
+                return false;
 
             long initialPos = stream.Position;
 
@@ -83,7 +110,10 @@ namespace osu.Framework.Graphics.Textures
                     stream.ReadExactly(buffer.Memory.Span);
 
                     using (var stbiImage = Stbi.LoadFromMemory(buffer.Memory.Span, 4))
-                        return Image.LoadPixelData(MemoryMarshal.Cast<byte, TPixel>(stbiImage.Data), stbiImage.Width, stbiImage.Height);
+                    {
+                        image = Image.LoadPixelData(MemoryMarshal.Cast<byte, TPixel>(stbiImage.Data), stbiImage.Width, stbiImage.Height);
+                        return true;
+                    }
                 }
             }
             catch (Exception e)
@@ -95,13 +125,13 @@ namespace osu.Framework.Graphics.Textures
                 stream.Position = initialPos;
 
                 bool isWebP = TextureUpload.isWebP(stream);
-                var image = Image.Load<TPixel>(stream);
+                image = Image.Load<TPixel>(stream);
 
                 // a stupid fix for heavily compressed webp images with visible artifacts but it's efficient and works
                 if (isWebP)
                     image.Mutate(x => x.BoxBlur(0));
 
-                return image;
+                return true;
             }
         }
 
@@ -117,9 +147,9 @@ namespace osu.Framework.Graphics.Textures
             stream.Position = initialPos;
 
             return header[0] == 'R' && header[1] == 'I' &&
-                header[2] == 'F' && header[3] == 'F' &&
-                header[8] == 'W' && header[9] == 'E' &&
-                header[10] == 'B' && header[11] == 'P';
+                   header[2] == 'F' && header[3] == 'F' &&
+                   header[8] == 'W' && header[9] == 'E' &&
+                   header[10] == 'B' && header[11] == 'P';
         }
 
         /// <summary>
