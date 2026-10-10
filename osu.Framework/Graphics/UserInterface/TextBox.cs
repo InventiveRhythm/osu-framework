@@ -1429,7 +1429,7 @@ namespace osu.Framework.Graphics.UserInterface
 
                 cursorAndLayout.Invalidate();
 
-                int selectionLengthDelta = Math.Abs(lastSelectionLength - selectionLength);
+                int selectionLengthDelta = Math.Abs(lastSelectionLength - SelectionLength);
 
                 onTextSelectionChanged(selectionLengthDelta > 1 ? TextSelectionType.Word : TextSelectionType.Character, lastSelectionBounds);
 
