@@ -15,6 +15,8 @@ namespace osu.Framework.Graphics.Containers
 {
     public partial class DelayedLoadUnloadWrapper : DelayedLoadWrapper
     {
+        public bool AllowUnloading { get; set; } = true;
+
         private readonly double timeBeforeUnload;
 
         public DelayedLoadUnloadWrapper(Func<Drawable> createContentFunction, double timeBeforeLoad = 500, double timeBeforeUnload = 1000)
@@ -31,7 +33,7 @@ namespace osu.Framework.Graphics.Containers
 
         private ScheduledDelegate unloadSchedule;
 
-        protected bool ShouldUnloadContent => timeBeforeUnload == 0 || timeHidden > timeBeforeUnload;
+        protected bool ShouldUnloadContent => AllowUnloading && (timeBeforeUnload == 0 || timeHidden > timeBeforeUnload);
 
         private ScheduledDelegate scheduledUnloadCheckRegistration;
 
@@ -105,7 +107,7 @@ namespace osu.Framework.Graphics.Containers
                 Debug.Assert(Content.LoadState >= LoadState.Ready);
 
                 // This code can be expensive, so only run if we haven't yet loaded.
-                if (IsIntersecting)
+                if (IsIntersecting || !AllowUnloading)
                     timeHidden = 0;
                 else
                     timeHidden += unloadClock.ElapsedFrameTime;

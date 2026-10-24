@@ -60,6 +60,8 @@ namespace osu.Framework.Graphics.Video
 
         public delegate AVCodecContext* AvcodecAllocContext3Delegate(AVCodec* codec);
 
+        public delegate AVBufferRef* AvBufferRefDelegate(AVBufferRef* buf);
+
         public delegate void AvcodecFreeContextDelegate(AVCodecContext** avctx);
 
         public delegate int AvcodecParametersToContextDelegate(AVCodecContext* codec, AVCodecParameters* par);
@@ -120,6 +122,7 @@ namespace osu.Framework.Graphics.Video
         public AvCodecIsDecoderDelegate av_codec_is_decoder;
         public AvcodecGetHwConfigDelegate avcodec_get_hw_config;
         public AvcodecAllocContext3Delegate avcodec_alloc_context3;
+        public AvBufferRefDelegate av_buffer_ref;
         public AvcodecFreeContextDelegate avcodec_free_context;
         public AvcodecParametersToContextDelegate avcodec_parameters_to_context;
         public AvcodecOpen2Delegate avcodec_open2;
