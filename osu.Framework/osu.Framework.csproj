@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyTitle>osu!framework</AssemblyTitle>
     <AssemblyName>osu.Framework</AssemblyName>
-    <Description>A 2D application/game framework written with rhythm games in mind.</Description>
+    <Description>A fork of osu!framework, with fluXis-specific tweaks.</Description>
     <!-- Enabling this breaks iOS projects from building due to silly naming conflicts (https://github.com/dotnet/runtime/issues/79500#issuecomment-1345624309).
          It's still enabled externally on packaging scripts so should be fine to disable in project. -->
     <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
@@ -14,7 +14,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Nuget">
     <Title>osu!framework</Title>
-    <PackageId>ppy.osu.Framework</PackageId>
+    <PackageId>InventiveRhythm.Framework</PackageId>
     <PackageReleaseNotes>Automated release.</PackageReleaseNotes>
     <PackageTags>osu game framework</PackageTags>
   </PropertyGroup>
