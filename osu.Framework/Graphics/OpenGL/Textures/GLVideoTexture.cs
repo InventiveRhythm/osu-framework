@@ -37,17 +37,18 @@ namespace osu.Framework.Graphics.OpenGL.Textures
             if (TextureIds == null)
             {
                 Debug.Assert(memoryLease == null);
-                memoryLease = NativeMemoryTracker.AddMemory(this, Width * Height * 3 / 2);
+                memoryLease = NativeMemoryTracker.AddMemory(this, Width * Height * 5 / 2);
 
-                TextureIds = new int[3];
+                TextureIds = new int[4];
                 GL.GenTextures(TextureIds.Length, TextureIds);
 
                 Renderer.BindTexture(this);
 
                 for (uint i = 0; i < TextureIds.Length; i++)
                 {
-                    int width = videoUpload.GetPlaneWidth(i);
-                    int height = videoUpload.GetPlaneHeight(i);
+                    bool isDummyAlpha = i == 3 && !videoUpload.HasAlpha;
+                    int width = isDummyAlpha ? 1 : videoUpload.GetPlaneWidth(i);
+                    int height = isDummyAlpha ? 1 : videoUpload.GetPlaneHeight(i);
 
                     textureSize += width * height;
 
@@ -61,6 +62,12 @@ namespace osu.Framework.Graphics.OpenGL.Textures
 
                     GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
                     GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+
+                    if (isDummyAlpha)
+                    {
+                        byte whitePixel = 255;
+                        GL.TexSubImage2D(TextureTarget2d.Texture2D, 0, 0, 0, 1, 1, PixelFormat.Red, PixelType.UnsignedByte, new IntPtr(&whitePixel));
+                    }
                 }
             }
 
@@ -68,6 +75,9 @@ namespace osu.Framework.Graphics.OpenGL.Textures
 
             for (uint i = 0; i < TextureIds.Length; i++)
             {
+                if (i == 3 && !videoUpload.HasAlpha)
+                    continue;
+
                 GL.ActiveTexture(TextureUnit.Texture0 + (int)i);
 
                 GL.PixelStore(PixelStoreParameter.UnpackRowLength, videoUpload.Frame->linesize[i]);

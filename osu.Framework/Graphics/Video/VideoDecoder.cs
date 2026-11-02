@@ -76,7 +76,9 @@ namespace osu.Framework.Graphics.Video
         private AVIOContext* ioContext;
         private AVStream* stream;
         private AVCodecContext* codecContext;
+        private AVCodecContext* alphaCodecContext;
         private SwsContext* swsContext;
+        private SwsContext* alphaSwsContext;
 
         private avio_alloc_context_read_packet readPacketCallback;
         private avio_alloc_context_seek seekCallback;
@@ -180,6 +182,8 @@ namespace osu.Framework.Graphics.Video
             decoderCommands.Enqueue(() =>
             {
                 ffmpeg.avcodec_flush_buffers(codecContext);
+                if (alphaCodecContext != null) ffmpeg.avcodec_flush_buffers(alphaCodecContext);
+
                 ffmpeg.av_seek_frame(formatContext, stream->index, (long)(targetTimestamp / timeBaseInSeconds / 1000.0), FFmpegFuncs.AVSEEK_FLAG_BACKWARD);
                 skipOutputUntilTime = targetTimestamp;
                 State = DecoderState.Ready;
@@ -398,6 +402,12 @@ namespace osu.Framework.Graphics.Video
                         ffmpeg.avcodec_free_context(ptr);
                 }
 
+                if (alphaCodecContext != null)
+                {
+                    fixed (AVCodecContext** ptr = &alphaCodecContext)
+                        ffmpeg.avcodec_free_context(ptr);
+                }
+
                 codecContext = ffmpeg.avcodec_alloc_context3(decoder.Pointer);
                 codecContext->pkt_timebase = stream->time_base;
 
@@ -437,6 +447,22 @@ namespace osu.Framework.Graphics.Video
                     continue;
                 }
 
+                if (codecParams.codec_id is AVCodecID.AV_CODEC_ID_VP8 or AVCodecID.AV_CODEC_ID_VP9)
+                {
+                    alphaCodecContext = ffmpeg.avcodec_alloc_context3(decoder.Pointer);
+
+                    if (alphaCodecContext != null)
+                    {
+                        alphaCodecContext->pkt_timebase = stream->time_base;
+                        ffmpeg.avcodec_parameters_to_context(alphaCodecContext, &codecParams);
+
+                        if (hwDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+                            ffmpeg.av_hwdevice_ctx_create(&alphaCodecContext->hw_device_ctx, hwDeviceType, null, null, 0);
+
+                        ffmpeg.avcodec_open2(alphaCodecContext, decoder.Pointer, null);
+                    }
+                }
+
                 Logger.Log($"Successfully initialized decoder: {decoder.Name}");
 
                 openSuccessful = true;
@@ -451,6 +477,7 @@ namespace osu.Framework.Graphics.Video
         {
             var packet = ffmpeg.av_packet_alloc();
             var receiveFrame = ffmpeg.av_frame_alloc();
+            var alphaReceiveFrame = ffmpeg.av_frame_alloc();
 
             const int max_pending_frames = 3;
 
@@ -464,7 +491,7 @@ namespace osu.Framework.Graphics.Video
                         case DecoderState.Running:
                             if (decodedFrames.Count < max_pending_frames)
                             {
-                                decodeNextFrame(packet, receiveFrame);
+                                decodeNextFrame(packet, receiveFrame, alphaReceiveFrame);
                             }
                             else
                             {
@@ -505,13 +532,14 @@ namespace osu.Framework.Graphics.Video
             {
                 ffmpeg.av_packet_free(&packet);
                 ffmpeg.av_frame_free(&receiveFrame);
+                ffmpeg.av_frame_free(&alphaReceiveFrame);
 
                 if (State != DecoderState.Faulted)
                     State = DecoderState.Stopped;
             }
         }
 
-        private void decodeNextFrame(AVPacket* packet, AVFrame* receiveFrame)
+        private void decodeNextFrame(AVPacket* packet, AVFrame* receiveFrame, AVFrame* alphaReceiveFrame)
         {
             // read data from input into AVPacket.
             // only read if the packet is empty, otherwise we would overwrite what's already there which can lead to visual glitches.
@@ -527,7 +555,9 @@ namespace osu.Framework.Graphics.Video
 
                 if (packet->stream_index == stream->index)
                 {
-                    int sendPacketResult = sendPacket(receiveFrame, packet);
+                    if (alphaCodecContext != null) decodeAlphaFrame(packet);
+
+                    int sendPacketResult = sendPacket(receiveFrame, alphaReceiveFrame, packet);
 
                     // keep the packet data for next frame if we didn't send it successfully.
                     if (sendPacketResult == -FFmpegFuncs.EAGAIN)
@@ -542,7 +572,9 @@ namespace osu.Framework.Graphics.Video
             else if (readFrameResult == FFmpegFuncs.AVERROR_EOF)
             {
                 // Flush decoder.
-                sendPacket(receiveFrame, null);
+                sendPacket(receiveFrame, alphaReceiveFrame, null);
+                if (alphaCodecContext != null)
+                    ffmpeg.avcodec_send_packet(alphaCodecContext, null);
 
                 if (Looping)
                 {
@@ -566,7 +598,7 @@ namespace osu.Framework.Graphics.Video
             }
         }
 
-        private int sendPacket(AVFrame* receiveFrame, AVPacket* packet)
+        private int sendPacket(AVFrame* receiveFrame, AVFrame* alphaReceiveFrame, AVPacket* packet)
         {
             // send the packet for decoding.
             int sendPacketResult = ffmpeg.avcodec_send_packet(codecContext, packet);
@@ -575,7 +607,7 @@ namespace osu.Framework.Graphics.Video
             // otherwise we would get stuck in an infinite loop.
             if (sendPacketResult == 0 || sendPacketResult == -FFmpegFuncs.EAGAIN)
             {
-                readDecodedFrames(receiveFrame);
+                readDecodedFrames(receiveFrame, alphaReceiveFrame);
             }
             else
             {
@@ -589,11 +621,13 @@ namespace osu.Framework.Graphics.Video
         private readonly ConcurrentQueue<FFmpegFrame> hwTransferFrames = new ConcurrentQueue<FFmpegFrame>();
         private void returnHwTransferFrame(FFmpegFrame frame) => hwTransferFrames.Enqueue(frame);
 
-        private void readDecodedFrames(AVFrame* receiveFrame)
+        private void readDecodedFrames(AVFrame* receiveFrame, AVFrame* alphaReceiveFrame)
         {
             while (true)
             {
                 int receiveFrameResult = ffmpeg.avcodec_receive_frame(codecContext, receiveFrame);
+
+                bool hasAlphaFrame = false || (alphaCodecContext != null && ffmpeg.avcodec_receive_frame(alphaCodecContext, alphaReceiveFrame) == 0);
 
                 if (receiveFrameResult < 0)
                 {
@@ -646,10 +680,42 @@ namespace osu.Framework.Graphics.Video
                     ffmpeg.av_frame_move_ref(frame.Pointer, receiveFrame);
                 }
 
+                FFmpegFrame alphaFrame = null;
+
+                if (hasAlphaFrame)
+                {
+                    if (((AVPixelFormat)alphaReceiveFrame->format).IsHardwarePixelFormat())
+                    {
+                        alphaFrame = new FFmpegFrame(ffmpeg);
+
+                        if (ffmpeg.av_hwframe_transfer_data(alphaFrame.Pointer, alphaReceiveFrame, 0) < 0)
+                        {
+                            alphaFrame.Dispose();
+                            alphaFrame = null;
+                        }
+                    }
+                    else
+                    {
+                        alphaFrame = new FFmpegFrame(ffmpeg);
+                        ffmpeg.av_frame_move_ref(alphaFrame.Pointer, alphaReceiveFrame);
+                    }
+                }
+
                 lastDecodedFrameTime = (float)frameTime;
 
-                // Note: this is the pixel format that `VideoTexture` expects internally
-                frame = ensureFramePixelFormat(frame, AVPixelFormat.AV_PIX_FMT_YUV420P);
+                bool hasAlpha = frame.HasAlpha() || alphaFrame != null;
+                // Logger.Log($"format: {(AVPixelFormat)frame.Pointer->format} hasAlpha: {hasAlpha}");
+
+                if (alphaFrame != null)
+                {
+                    frame = mergeAlphaFrame(frame, alphaFrame);
+                }
+                else
+                {
+                    AVPixelFormat targetFormat = hasAlpha ? AVPixelFormat.AV_PIX_FMT_YUVA420P : AVPixelFormat.AV_PIX_FMT_YUV420P;
+                    frame = ensureFramePixelFormat(frame, targetFormat, ref swsContext);
+                }
+
                 if (frame == null)
                     continue;
 
@@ -658,17 +724,106 @@ namespace osu.Framework.Graphics.Video
 
                 var upload = new VideoTextureUpload(frame);
 
-                // We do not support videos with transparency at this point, so the upload's opacity as well as the texture's opacity is always opaque.
-                tex.SetData(upload, Opacity.Opaque);
+                tex.SetData(upload, hasAlpha ? Opacity.Mixed : Opacity.Opaque);
                 decodedFrames.Enqueue(new DecodedFrame { Time = frameTime, Texture = tex });
             }
+        }
+
+        private void decodeAlphaFrame(AVPacket* packet)
+        {
+            int sideDataSize = 0;
+            byte* sideData = ffmpeg.av_packet_get_side_data(packet, AVPacketSideDataType.AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL, &sideDataSize);
+
+            if (sideData == null || sideDataSize < 8) return;
+
+            ulong id = 0;
+
+            for (int i = 0; i < 8; i++) id = (id << 8) | sideData[i];
+
+            if (id != 1) return;
+
+            var alphaPacket = ffmpeg.av_packet_alloc();
+            alphaPacket->pts = packet->pts;
+            alphaPacket->dts = packet->dts;
+
+            int copySize = sideDataSize - 8;
+            ffmpeg.av_new_packet(alphaPacket, copySize);
+            Buffer.MemoryCopy(sideData + 8, alphaPacket->data, copySize, copySize);
+
+            ffmpeg.avcodec_send_packet(alphaCodecContext, alphaPacket);
+
+            ffmpeg.av_packet_unref(alphaPacket);
+            ffmpeg.av_packet_free(&alphaPacket);
+        }
+
+        private FFmpegFrame mergeAlphaFrame(FFmpegFrame mainFrame, FFmpegFrame alphaFrame)
+        {
+            var targetMain = ensureFramePixelFormat(mainFrame, AVPixelFormat.AV_PIX_FMT_YUV420P, ref swsContext);
+            var targetAlpha = ensureFramePixelFormat(alphaFrame, AVPixelFormat.AV_PIX_FMT_GRAY8, ref alphaSwsContext);
+
+            if (targetMain == null || targetAlpha == null)
+            {
+                targetMain?.Return();
+                targetAlpha?.Return();
+                return null;
+            }
+
+            var mergedFrame = new FFmpegFrame(ffmpeg);
+            mergedFrame.Pointer->format = (int)AVPixelFormat.AV_PIX_FMT_YUVA420P;
+            mergedFrame.Pointer->width = targetMain.Pointer->width;
+            mergedFrame.Pointer->height = targetMain.Pointer->height;
+
+            if (ffmpeg.av_frame_get_buffer(mergedFrame.Pointer, 0) < 0)
+            {
+                mergedFrame.Dispose();
+                targetMain.Return();
+                targetAlpha.Return();
+                return null;
+            }
+
+            Parallel.For(0, 4, (i) =>
+            {
+                uint ui = (uint)i;
+
+                if (i < 3)
+                {
+                    int planeHeight = i == 0 ? targetMain.Pointer->height : (targetMain.Pointer->height + 1) / 2;
+                    int planeWidth = i == 0 ? targetMain.Pointer->width : (targetMain.Pointer->width + 1) / 2;
+
+                    for (int y = 0; y < planeHeight; y++)
+                    {
+                        Buffer.MemoryCopy(
+                            targetMain.Pointer->data[ui] + y * targetMain.Pointer->linesize[ui],
+                            mergedFrame.Pointer->data[ui] + y * mergedFrame.Pointer->linesize[ui],
+                            planeWidth, planeWidth);
+                    }
+                }
+                else
+                {
+                    for (int y = 0; y < targetMain.Pointer->height; y++)
+                    {
+                        Buffer.MemoryCopy(
+                            targetAlpha.Pointer->data[0] + y * targetAlpha.Pointer->linesize[0],
+                            mergedFrame.Pointer->data[3] + y * mergedFrame.Pointer->linesize[3],
+                            targetMain.Pointer->width, targetMain.Pointer->width);
+                    }
+                }
+            });
+
+            mergedFrame.Pointer->best_effort_timestamp = targetMain.Pointer->best_effort_timestamp;
+            mergedFrame.Pointer->pts = targetMain.Pointer->pts;
+
+            targetMain.Return();
+            targetAlpha.Return();
+
+            return mergedFrame;
         }
 
         private readonly ConcurrentQueue<FFmpegFrame> scalerFrames = new ConcurrentQueue<FFmpegFrame>();
         private void returnScalerFrame(FFmpegFrame frame) => scalerFrames.Enqueue(frame);
 
         [CanBeNull]
-        private FFmpegFrame ensureFramePixelFormat(FFmpegFrame frame, AVPixelFormat targetPixelFormat)
+        private FFmpegFrame ensureFramePixelFormat(FFmpegFrame frame, AVPixelFormat targetPixelFormat, ref SwsContext* currentSwsContext)
         {
             if (frame.PixelFormat == targetPixelFormat)
                 return frame;
@@ -676,8 +831,8 @@ namespace osu.Framework.Graphics.Video
             int width = frame.Pointer->width;
             int height = frame.Pointer->height;
 
-            swsContext = ffmpeg.sws_getCachedContext(
-                swsContext,
+            currentSwsContext = ffmpeg.sws_getCachedContext(
+                currentSwsContext,
                 width, height, frame.PixelFormat,
                 width, height, targetPixelFormat,
                 1, null, null, null);
@@ -708,7 +863,7 @@ namespace osu.Framework.Graphics.Video
             }
 
             int scalerResult = ffmpeg.sws_scale(
-                swsContext,
+                currentSwsContext,
                 frame.Pointer->data, frame.Pointer->linesize, 0, height,
                 scalerFrame.Pointer->data, scalerFrame.Pointer->linesize);
 
@@ -888,7 +1043,9 @@ namespace osu.Framework.Graphics.Video
                 avio_context_free = FFmpeg.AutoGen.ffmpeg.avio_context_free,
                 sws_freeContext = FFmpeg.AutoGen.ffmpeg.sws_freeContext,
                 sws_getCachedContext = FFmpeg.AutoGen.ffmpeg.sws_getCachedContext,
-                sws_scale = FFmpeg.AutoGen.ffmpeg.sws_scale
+                sws_scale = FFmpeg.AutoGen.ffmpeg.sws_scale,
+                av_packet_get_side_data = FFmpeg.AutoGen.ffmpeg.av_packet_get_side_data,
+                av_new_packet = FFmpeg.AutoGen.ffmpeg.av_new_packet
             };
         }
 
@@ -938,6 +1095,12 @@ namespace osu.Framework.Graphics.Video
                         ffmpeg.avcodec_free_context(ptr);
                 }
 
+                if (alphaCodecContext != null)
+                {
+                    fixed (AVCodecContext** ptr = &alphaCodecContext)
+                        ffmpeg.avcodec_free_context(ptr);
+                }
+
                 seekCallback = null;
                 readPacketCallback = null;
 
@@ -946,6 +1109,9 @@ namespace osu.Framework.Graphics.Video
 
                 if (swsContext != null)
                     ffmpeg.sws_freeContext(swsContext);
+
+                if (alphaSwsContext != null)
+                    ffmpeg.sws_freeContext(alphaSwsContext);
 
                 while (decodedFrames.TryDequeue(out var f))
                 {
