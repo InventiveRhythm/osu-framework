@@ -87,9 +87,9 @@ namespace osu.Framework.Graphics.Textures
             )
         };
 
-        public static Image<TPixel> LoadFromStream<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel>
+        public static Image<TPixel> LoadFromStream<TPixel>(Stream stream, bool allowStb = true) where TPixel : unmanaged, IPixel<TPixel>
         {
-            if (loadUsingStbi(stream, out Image<TPixel> loadPixelData))
+            if (allowStb && loadUsingStbi(stream, out Image<TPixel> loadPixelData))
                 return loadPixelData;
 
             return Image.Load<TPixel>(DECODER_OPTIONS, stream);
